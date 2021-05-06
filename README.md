@@ -1,2 +1,8 @@
 # NatureSpirit
-CodinGame Nature Spirit Challenge
+
+![](picture/CodinGames_NatureSpirit.min.jpg)
+
+***CodinGame Nature Spirit Challenge***
+
+
+**Starting**
