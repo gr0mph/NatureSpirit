@@ -1,6 +1,6 @@
 # NatureSpirit
 
-![](picture/CodinGames_NatureSpirit.min.jpg)
+![](picture/CodinGames_Nature_Spirit.min.jpg)
 
 ***CodinGame Nature Spirit Challenge***
 
