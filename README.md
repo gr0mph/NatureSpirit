@@ -8,5 +8,6 @@
 
 **Starting**
 
-- [x] Complete, select the best cells
-- [ ] Grows, select the best cells
+- [x] Complete, select the best cells.
+- [ ] Grows, select the best cells.
+- [x] Add class and specific object such like Tree, Cell and Agent.
