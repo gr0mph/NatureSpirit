@@ -11,3 +11,5 @@
 - [x] Complete, select the best cells.
 - [ ] Grows, select the best cells.
 - [x] Add class and specific object such like Tree, Cell and Agent.
+- [x] Add node that allows simulation
+- [x] Add method state that search all possible action for one player. 

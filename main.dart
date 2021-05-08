@@ -93,7 +93,8 @@ List<Node> state( int isMine , List<Cell> cell , List<Agent> player , List<Tree>
                         if( i == -1 )   break;
                     }
 
-                    if( i == -1 )   continue;
+                    if( i == -1 )               continue;
+                    if( cell[i].richness == 0 ) continue;
                     if( tree[i].isMine == -1 )
                     {
                         n = new Node(f: seed, a:"SEED" , p: [ c.index , i] );
@@ -121,7 +122,7 @@ List<Node> state( int isMine , List<Cell> cell , List<Agent> player , List<Tree>
     {
         if( _.cost == -1 )
         {
-            int index = _.p[0];
+            int index = _.p.last;
             _.cost = cost[ tree[index].size ];
         }
 
@@ -276,10 +277,6 @@ void main() {
     List inputs;
     int n = 0;
 
-    //  Obsolete
-    int complete = 35 ;
-    bool isComplete = false;
-
     List<Cell> cell = List.generate( 37 ,
     (i) => new Cell( inputs : ['0','0','0','0','0','0','0','0'] ) , growable : false);
 
@@ -298,6 +295,7 @@ void main() {
     // game loop
     while (true)
     {
+        //  Update
         player[kMINE].day = parse(read()); // the game lasts 24 days: 0-23
         player[kMINE].nutrients = parse(read()); // the base score you gain from the next COMPLETE action
 
@@ -311,8 +309,8 @@ void main() {
         for (int i = 0; i < n ; i++) {
             inputs = read().split(' ');
             tree[ parse(inputs[0]) ].size = parse(inputs[1]);
-            tree[ parse(inputs[0]) ].size = parse(inputs[2]);
-            tree[ parse(inputs[0]) ].size = parse(inputs[3]);
+            tree[ parse(inputs[0]) ].isMine = parse(inputs[2]);
+            tree[ parse(inputs[0]) ].isDormant = parse(inputs[3]);
         }
 
         n = parse(read()); // all legal actions
@@ -322,21 +320,19 @@ void main() {
             // try printing something from here to start with
         }
 
-        // GROW cellIdx | SEED sourceIdx targetIdx | COMPLETE cellIdx | WAIT <message>
-        //print('WAIT');
+        //  State
+        List<Node> q = state( kMINE , cell , player , tree );
+        List<Node> o = state( kOPP , cell , player , tree );
+
+        for( final _ in q )
+        {
+            error("DEBUG >> ${player[kMINE].sun} ${_.cost} $_");
+        }
 
         //  Out
-        if( isComplete == true )
-        {
-            print("COMPLETE ${complete}");
-        }
-        else
-        {
-            print("WAIT");
-        }
+        //...
 
-        //  Reset
-        isComplete = false;
-        complete = 35;
+        // GROW cellIdx | SEED sourceIdx targetIdx | COMPLETE cellIdx | WAIT <message>
+        print('WAIT');
     }
 }
