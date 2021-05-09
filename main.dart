@@ -9,6 +9,14 @@ final List<List<int>> kSEED = [
     [0,0,0] , [0,0,1] , [0,1,1] , [1,1,1] , [1,1,2] , [1,2,2] , [2,2,2] , [2,2,3] , [2,3,3] ,
     [3,3,3] , [3,3,4] , [3,4,4] , [4,4,4] , [4,4,5] , [4,5,5] , [5,5,5] , [5,5,0] , [5,0,0]
     ];
+final List<List<List<Function>>> kHEURISTIC =
+[
+    [   [h_seed,h_seed] , [h_seed,h_grow] , [h_seed,h_over], [h_seed,h_wait]    ],
+    [   [h_grow,h_seed] , [h_grow,h_grow] , [h_grow,h_over], [h_grow,h_wait]    ],
+    [   [h_over,h_seed] , [h_over,h_grow] , [h_over,h_over], [h_over,h_wait]    ],
+    [   [h_wait,h_seed] , [h_wait,h_grow] , [h_wait,h_over], [h_wait,h_wait]    ],
+];
+
 
 String read() {
   String? s = stdin.readLineSync();
@@ -133,6 +141,58 @@ List<Node> state( int isMine , List<Cell> cell , List<Agent> player , List<Tree>
 
     return q;
 }
+
+List<int> h_seed(
+    int p1 , int p2 , int id1 , int id2 ,
+    List<Node> n , List<Cell> cell , List<Agent> player , List<Tree> tree )
+{
+    List<int> k = [ 0 , 0 ];
+    ...
+    return k;
+}
+
+List<int> h_grow(
+    int p1 , int p2 , int id1 , int id2 ,
+    List<Node> n , List<Cell> cell , List<Agent> player , List<Tree> tree )
+{
+    List<int> k = [ 0 , 0 ];
+    ...
+    return k;
+}
+
+List<int> h_wait(int p1 , int p2 , int id1 , int id2 , List<Node> n , List<Cell> cell , List<Agent> player , List<Tree> tree )
+{
+    List<int> k = [ 0 , 0 ];
+    ...
+    return k;
+}
+
+List<int> h_over(int p1 , int p2 , int id1 , int id2 , List<Node> n , List<Cell> cell , List<Agent> player , List<Tree> tree )
+{
+    List<int> k = [ 0 , 0 ];
+    ...
+    return k;
+}
+
+int heuristic(
+    List<Function> f ,
+    List<Node> n , List<Cell> cell , List<Agent> player , List<Tree> tree )
+{
+    List<int> k = [ 0 , 0 ];
+    List<int> id = [ n[ kMINE ].p.last , n[ kOPP ].p.last ];
+
+    List<int> k1 =
+    f[kMINE]( kMINE , kOPP , id[kMINE] , id[kOPP] , n , cell , player , tree );
+
+    List<int> k2 =
+    f[kOPP]( kOPP , kMINE , id[kOPP] , id[kMINE] , n , cell , player , tree );
+
+    k[kMINE] = k1[kMINE] + k2[kMINE];
+    k[kOPP] = k1[kOPP] + k2[kOPP];
+
+    return k[kMINE] - k[kOPP];
+}
+
 
 //  Warning add one parameter in parameter to know MINE or OPP
 void wait( List<int> p , List<Cell> cell , List<Agent> player , List<Tree> tree )
@@ -316,7 +376,7 @@ void main() {
         n = parse(read()); // all legal actions
         for (int i = 0; i < n ; i++) {
             List<String> possibleAction = read().split(' ');
-            error(possibleAction);
+            //error(possibleAction);
             // try printing something from here to start with
         }
 
@@ -329,10 +389,32 @@ void main() {
             error("DEBUG >> ${player[kMINE].sun} ${_.cost} $_");
         }
 
-        //  Out
-        //...
+        List<int> m = List.generate( q.length , (i) => 0 , growable : false );
+        List<List<int>> h = List.generate( q.length , (i) =>
+        List.generate( o.length , (i) => 0 , growable : false ) , growable: false );
 
-        // GROW cellIdx | SEED sourceIdx targetIdx | COMPLETE cellIdx | WAIT <message>
-        print('WAIT');
+        int best_id = q.length - 1;    //  Choose wait
+        int best_score = 0;
+
+        //q.last.p.removeLast();
+        for( int row = 0 ; row < q.length ; row++ )
+        {
+            for( int col = 0 ; col < o.length ; col++ )
+            {
+                m[row] = m[row] ;
+            }
+            m[row] = m[row] ~/ o.length;
+            if( m[row] > best_score )
+            {
+                best_score = m[row];
+                best_id = row;
+            }
+        }
+
+        error(m);
+        error(h);
+
+        //  Out
+        //print('WAIT');
     }
 }
