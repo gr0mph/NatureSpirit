@@ -18,3 +18,5 @@
 
 - [x] Code an heuristic evaluation action
 - [x] Choose best action
+- [ ] Road1 : Use state
+- [ ] Road2 : Use simulator
