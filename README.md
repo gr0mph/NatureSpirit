@@ -4,7 +4,7 @@
 
 ***CodinGame Nature Spirit Challenge***
 
-![](picture/league-wood2.png)![](picture/league-wood2.png)
+![](picture/league-wood2.png)![](picture/league-wood2.png)![](picture/league_bronze_03.png)
 
 **Starting**
 
