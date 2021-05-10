@@ -20,3 +20,8 @@
 - [x] Choose best action
 - [ ] Road1 : Use state
 - [ ] Road2 : Use simulator
+
+**Tree**
+
+- [ ] Need simulator
+- [ ] Need node

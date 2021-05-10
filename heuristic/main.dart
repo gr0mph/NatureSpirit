@@ -9,13 +9,6 @@ final List<List<int>> kSEED = [
     [0,0,0] , [0,0,1] , [0,1,1] , [1,1,1] , [1,1,2] , [1,2,2] , [2,2,2] , [2,2,3] , [2,3,3] ,
     [3,3,3] , [3,3,4] , [3,4,4] , [4,4,4] , [4,4,5] , [4,5,5] , [5,5,5] , [5,5,0] , [5,0,0]
     ];
-final List<List<List<Function>>> kHEURISTIC =
-[
-    [   [h_seed,h_seed] , [h_seed,h_grow] , [h_seed,h_over], [h_seed,h_wait]    ],
-    [   [h_grow,h_seed] , [h_grow,h_grow] , [h_grow,h_over], [h_grow,h_wait]    ],
-    [   [h_over,h_seed] , [h_over,h_grow] , [h_over,h_over], [h_over,h_wait]    ],
-    [   [h_wait,h_seed] , [h_wait,h_grow] , [h_wait,h_over], [h_wait,h_wait]    ],
-];
 final List<List<int>> kSIMSUN =
 [
     [ 25,26,27,28,29,30,31 ],   [ 28,29,30,31,32,33,34 ],   [ 31,32,33,34,35,36,19 ],
@@ -38,37 +31,37 @@ final List<List<List<int>>> kFUZZY_NEIGH =
     [ [6,18,36],    [0,2,9],    [4,12,26],  [14,29],    [15,31],    [15,33] ],
     [ [18,36],      [1,8,21],   [0,3,11],   [5,14,29],  [16,32],    [17,34] ],
 
-    [ [19],     [20],       [8,9],      [1,0],      [18,17],    [36]    ],
-    [ [20],     [21],       [9,23],     [2,3],      [1,6],      [7,36]  ],
-    [ [21],     [22],       [23],       [10,11],    [2,0],      [8,7]   ],
-    [ [9,21],   [23],       [24],       [11,26],    [3,4],      [2,1]   ],
-    [ [10,9],   [24],       [25],       [26],       [12,13],    [3,0]   ],
-    [ [3,2],    [11,24],    [27],       [27],       [13,29],    [4,5]   ],
-    [ [4,0],    [12,11],    [27],       [28],       [29],       [14,15] ],
-    [ [5,6],    [4,3],      [13,27],    [29],       [30],       [15,32] ],
-    [ [16,17],  [5,0],      [14,13],    [30],       [31],       [32]    ],
-    [ [17,35],  [6,1],      [5,4],      [15,30],    [32],       [33]    ],
-    [ [35],     [18,7],     [6,0],      [16,15],    [33],       [34]    ],
-    [ [36],     [7,20],     [1,2],      [6,5],      [17,33],    [35]    ],
+    [ [19],         [20],       [8,9,23],   [1,0,4],    [18,17,33], [36]        ],
+    [ [20],         [21],       [9,23],     [2,3,12],   [1,6,16],   [7,36]      ],
+    [ [21],         [22],       [23],       [10,11,26], [2,0,5],    [8,7,36]    ],
+    [ [9,21],       [23],       [24],       [11,26],    [3,4,14],   [2,1,18]    ],
+    [ [10,9,21],    [24],       [25],       [26],       [12,13,29], [3,0,6]     ],
+    [ [3,2,8],      [11,24],    [26],       [27],       [13,29],    [4,5,16]    ],
+    [ [4,0,1],      [12,11,24], [27],       [28],       [29],       [14,15,32]  ],
+    [ [5,6,18],     [4,3,10],   [13,27],    [29],       [30],       [15,32]     ],
+    [ [16,17,35],   [5,0,2],    [14,13,27], [30],       [31],       [32]        ],
+    [ [17,35],      [6,1,8],    [5,4,12],   [15,30],    [32],       [33]        ],
+    [ [35],         [18,7,20],  [6,0,3],    [16,15,30], [33],       [34]        ],
+    [ [36],         [7,20],     [1,2,10],   [6,5,14],   [17,33],    [35]        ],
 
-    [ [],       [],         [20],       [7],        [36],       []      ],
-    [ [],       [],         [21],       [8],        [7],        [19]    ],
-    [ [],       [],         [22],       [9],        [8],        [20]    ],
-    [ [],       [],         [],         [23],       [9],        [21]    ],
-    [ [22],     [],         [],         [24],       [10],       [9]     ],
-    [ [23],     [],         [],         [25],       [11],       [10]    ],
-    [ [24],     [],         [],         [],         [26],       [11]    ],
-    [ [11],     [25],       [],         [],         [27],       [12]    ],
-    [ [12],     [26],       [],         [],         [28],       [13]    ],
-    [ [13],     [27],       [],         [],         [],         [29]    ],
-    [ [14],     [13],       [28],       [],         [],         [30]    ],
-    [ [15],     [14],       [29],       [],         [],         [31]    ],
-    [ [32],     [15],       [30],       [],         [],         []      ],
-    [ [33],     [16],       [15],       [31],       [],         []      ],
-    [ [34],     [17],       [16],       [32],       [],         []      ],
-    [ [],       [35],       [17],       [33],       [],         []      ],
-    [ [],       [36],       [18],       [17],       [34],       []      ],
-    [ [],       [19],       [7],        [18],       [35],       []      ],
+    [ [],           [],         [20,21,22], [7,1,0],    [36,35,34], []          ],
+    [ [],           [],         [21,22],    [8,2,3],    [7,18,17],  [19]        ],
+    [ [],           [],         [22],       [9,10,11],  [8,1,6],    [20,19]     ],
+    [ [],           [],         [],         [23,24,25], [9,2,0],    [21,20,19]  ],
+    [ [22],         [],         [],         [24,25],    [10,3,4],   [9,8,7]     ],
+    [ [23,22],      [],         [],         [25],       [11,12,13], [10,2,1]    ],
+    [ [24,23,22],   [],         [],         [],         [26,27,28], [11,3,0]    ],
+    [ [11,10,9],    [25],       [],         [],         [27,28],    [12,4,5]    ],
+    [ [12,3,2],     [26,25],    [],         [],         [28],       [13,14,15]  ],
+    [ [13,4,0],     [27,26,25], [],         [],         [],         [29,30,31]  ],
+    [ [14,5,6],     [13,12,11], [28],       [],         [],         [30,31]     ],
+    [ [15,16,17],   [14,4,3],   [29,28],    [],         [],         [31]        ],
+    [ [32,33,34],   [15,5,0],   [30,29,28], [],         [],         []          ],
+    [ [33,34],      [16,6,1],   [15,14,13], [31],       [],         []          ],
+    [ [34],         [17,18,7],  [16,5,4],   [32,31],    [],         []          ],
+    [ [],           [35,36,19], [17,6,0],   [33,32,31], [],         []          ],
+    [ [],           [36,19],    [18,1,2],   [17,16,15], [34],       []          ],
+    [ [],           [19],       [7,8,9],    [18,6,5],   [35,34],    []          ],
 ];
 final int STARTING = 0, FARMING = 1, NOISING = 2, SCORING = 3, ENDING = 4;
 
@@ -251,10 +244,11 @@ List<int> h_seed(
         return k;
 
     k[p1] = k[p1] - n.cost;                  //  Update cost, sun is point , no sun no point
-    k[p1] = k[p1] + kFUZZY_SHADOW[ id1 ] + 6;
+    k[p1] = k[p1] + 6 + cell[id1].richness;
 
     for( int d = 0 ; d < 6 ; d++ )
     {
+        int i = 1;
         for( final int hex in kFUZZY_NEIGH[id1][d] )
         {
             if( tree[hex].isMine == p1 )    k[p1] = k[p1] - 2;
@@ -269,7 +263,8 @@ List<int> h_seed(
                 ;
             }
             //  One iteration only
-            break;
+            if( i == 2 )    break;
+            i++;
         }
     }
     error("[${id1}] >> seed k ${k} id2 ${id2}");
@@ -281,6 +276,17 @@ List<int> h_grow(
     Node n , List<Cell> cell , List<Agent> player , List<Tree> tree )
 {
     List<int> k = [ 0 , 0 ];
+
+    //  Check F.S.M
+    if( player[p1].state == ENDING )
+    {
+        if( tree[id1].size == 2 && player[p1].day < 23 )
+        {
+            //k[p1] = 100;
+            k[p1] = k[p1] - n.cost - 4 + (player[p1].nutrients + cell[id1].richness) * 3;
+        }
+        return k;
+    }
 
     int nDay = (24 - player[p1].day) ~/ 6 + 1;
     k[p1] = k[p1] - n.cost;
@@ -304,6 +310,8 @@ List<int> h_grow(
             if( tree[hex].isMine == p2 )
             {
                 //  Depends of the F.S.M.
+                if( tree[hex].size > (tree[id1].size + 1) )     break;
+                p++;
                 ;
             }
             if( id2.contains(hex) )
@@ -313,7 +321,10 @@ List<int> h_grow(
             }
 
             if( p == kFUZZY_NEIGH[id1][d].length )
+            {
+                p = 3;
                 break;
+            }
             p++;
         }
         k[p1] = k[p1] + g * p;
@@ -344,11 +355,9 @@ List<int> h_over(
         for( final _ in tree )
             if( _.isMine == p1 && _.size == 3 )    n++;
 
-
-        error("h_over ENDING number $n 24 ${player[p1].day}");
         if( n >= (24 - player[p1].day) )
         {
-            k[p1] = 100;
+            k[p1] = k[p1] + (player[p1].nutrients + cell[id1].richness) * 3;
         }
     }
     else
@@ -359,25 +368,22 @@ List<int> h_over(
         k[p1] = k[p1] - n.cost;
         k[p1] = k[p1] + (player[p1].nutrients + cell[id1].richness) * 3;
 
-        //error("h_over $id1");
-        //error("h_over ${n.cost} ${player[p1].nutrients} ${cell[id1].richness}");
-
         for( int d = 0 ; d < 6 ; d++ )
         {
-            int p = 0;
-            int g1 = nDay , g2 = 0;
+            int g1 = 0 , g2 = 0;
+            int g = nDay;
             for( final int hex in kFUZZY_NEIGH[id1][d] )
             {
-                if( tree[hex].isMine == p1 )
+                if( tree[hex].isMine == p1 && g != 0 )
                 {
-                    p++;
-                    break;
+                    g1 = 0;
+                    g = 0;
                 }
-                if( tree[hex].isMine == p2 )
+                if( tree[hex].isMine == p2 && g != 0)
                 {
                     //  Depends of the F.S.M.
-                    g2 = g2 + nDay;
-                    break;
+                    g2 = g;
+                    g = 0;
                 }
                 if( id2.contains(hex) )
                 {
@@ -385,13 +391,15 @@ List<int> h_over(
                     ;
                 }
 
-                if( p == kFUZZY_NEIGH[id1][d].length )
-                    break;
-                p++;
+                if( p1 == kFUZZY_NEIGH[id1][d].length && g != 0 )
+                {
+                    g1 = g;
+                    g = 0;
+                }
             }
-            //error("day $d hex ${kFUZZY_NEIGH[id1][d]} gain $g1 $g2 p $p");
-            k[p1] = k[p1] - 3 * g1 * p;
-            k[p2] = k[p2] + g2 ;
+            g1 = g;
+            k[p1] = k[p1] - 3 * g1;
+            k[p2] = k[p2] + 3 * g2;
         }
     }
 
@@ -552,11 +560,15 @@ class Agent {
 
     void update_fsm( List<Cell> cell , Agent opp , List<Tree> tree )
     {
+        int n = 0;
+        for( final _ in tree )
+            if( _.isMine == kMINE && _.size == 3 )    n++;
+
         //...
         if( this.day < 4 )
             this.state = STARTING;   //  WAIT, GROW, WAIT, SEED, GROW, WAIT
         else
-        if( this.day > 19 )
+        if( this.day > (23 - n) || this.state == ENDING )
             this.state = ENDING;     //  COMPLETE, WAIT, COMPLETE, WAIT
         else
         if( this.scoring >= opp.scoring )
