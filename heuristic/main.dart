@@ -21,6 +21,57 @@ final List<List<int>> kSIMSUN =
     [ 25,26,27,28,29,30,31 ],   [ 28,29,30,31,32,33,34 ],   [ 31,32,33,34,35,36,19 ],
     [ 34,35,36,19,20,21,22 ],   [ 19,20,21,22,23,24,25 ],   [ 22,23,24,25,26,27,28 ],
 ];
+final List<int> kFUZZY_SHADOW =
+[   18,
+    15, 15, 15, 15, 15, 15,
+    9, 10, 9, 10, 9, 10, 9, 10, 9, 10, 9, 10,
+    3, 4, 4, 3, 4, 4, 3, 4, 4, 3, 4, 4, 3, 4, 4, 3, 4, 4,
+];
+final List<List<List<int>>> kFUZZY_NEIGH =
+[
+    [ [ 1, 7,19], [ 2, 9,22], [ 3,11,25], [ 4,13,28], [ 5,15,31], [ 6,17,34] ],
+
+    [ [7,19],       [8,21],     [2,10,24],  [0,4,13],   [6,16,32],  [18,35] ],
+    [ [8,20],       [9,22],     [10,24],    [3,12,27],  [0,5,15],   [1,18,35] ],
+    [ [2,8,20],     [10,23],    [11,25],    [12,27],    [4,14,30],  [0,6,17] ],
+    [ [0,1,7],      [3,10,23],  [12,26],    [13,28],    [14,30],    [5,16,33] ],
+    [ [6,18,36],    [0,2,9],    [4,12,26],  [14,29],    [15,31],    [15,33] ],
+    [ [18,36],      [1,8,21],   [0,3,11],   [5,14,29],  [16,32],    [17,34] ],
+
+    [ [19],     [20],       [8,9],      [1,0],      [18,17],    [36]    ],
+    [ [20],     [21],       [9,23],     [2,3],      [1,6],      [7,36]  ],
+    [ [21],     [22],       [23],       [10,11],    [2,0],      [8,7]   ],
+    [ [9,21],   [23],       [24],       [11,26],    [3,4],      [2,1]   ],
+    [ [10,9],   [24],       [25],       [26],       [12,13],    [3,0]   ],
+    [ [3,2],    [11,24],    [27],       [27],       [13,29],    [4,5]   ],
+    [ [4,0],    [12,11],    [27],       [28],       [29],       [14,15] ],
+    [ [5,6],    [4,3],      [13,27],    [29],       [30],       [15,32] ],
+    [ [16,17],  [5,0],      [14,13],    [30],       [31],       [32]    ],
+    [ [17,35],  [6,1],      [5,4],      [15,30],    [32],       [33]    ],
+    [ [35],     [18,7],     [6,0],      [16,15],    [33],       [34]    ],
+    [ [36],     [7,20],     [1,2],      [6,5],      [17,33],    [35]    ],
+
+    [ [],       [],         [20],       [7],        [36],       []      ],
+    [ [],       [],         [21],       [8],        [7],        [19]    ],
+    [ [],       [],         [22],       [9],        [8],        [20]    ],
+    [ [],       [],         [],         [23],       [9],        [21]    ],
+    [ [22],     [],         [],         [24],       [10],       [9]     ],
+    [ [23],     [],         [],         [25],       [11],       [10]    ],
+    [ [24],     [],         [],         [],         [26],       [11]    ],
+    [ [11],     [25],       [],         [],         [27],       [12]    ],
+    [ [12],     [26],       [],         [],         [28],       [13]    ],
+    [ [13],     [27],       [],         [],         [],         [29]    ],
+    [ [14],     [13],       [28],       [],         [],         [30]    ],
+    [ [15],     [14],       [29],       [],         [],         [31]    ],
+    [ [32],     [15],       [30],       [],         [],         []      ],
+    [ [33],     [16],       [15],       [31],       [],         []      ],
+    [ [34],     [17],       [16],       [32],       [],         []      ],
+    [ [],       [35],       [17],       [33],       [],         []      ],
+    [ [],       [36],       [18],       [17],       [34],       []      ],
+    [ [],       [19],       [7],        [18],       [35],       []      ],
+];
+final int STARTING = 0, FARMING = 1, NOISING = 2, SCORING = 3, ENDING = 4;
+
 
 String read() {
   String? s = stdin.readLineSync();
@@ -135,9 +186,12 @@ List<Node> state( int isMine , List<Cell> cell , List<Agent> player , List<Tree>
         if( _.cost == -1 )
         {
             int index = _.p.last;
-            _.cost = cost[ tree[index].size ];
-        }
 
+            if( tree[index].isMine == -1 )
+                _.cost = cost[ tree[index].size ];
+            else
+                _.cost = cost[ tree[index].size + 1 ];
+        }
     }
 
     //  Update queue
@@ -146,165 +200,214 @@ List<Node> state( int isMine , List<Cell> cell , List<Agent> player , List<Tree>
     return q;
 }
 
-List<int> h_seed(
-    int p1 , int p2 , int id1 , int id2 ,
-    List<Node> n , List<Cell> cell , List<Agent> player , List<Tree> tree )
+void renting(List<Cell> cell, List<Agent> player, List<Tree> tree)
 {
-    List<int> k = [ 0 , 0 ];
-    List<int> next = [ id1 , id2 ];
+    player[kMINE].scoring = player[kMINE].score + player[kMINE].sun ~/3;
+    player[kOPP].scoring = player[kOPP].score + player[kOPP].sun ~/3;
 
-    if( id1 == id2 ) return k;                   //  Collision
-
-    k[p1] = k[p1] - n[p1].cost;                  //  Update cost, sun is point , no sun no point
-    k[ p1 ] = cell[ id1 ].richness * 3 + 6;
-
-    for( int d = 0; d < 6 ; d++ )
+    int day = player[kMINE].day % 3;
+    player[kMINE].renting = 0;
+    player[kOPP].renting = 0;
+    for( final start in kSIMSUN[day] )
     {
-        next[ p1 ] = id1;
-        next[ p2 ] = id2;
-
-        //  P1
-        for( int l = 0 ; l < 3 ; l++ )
+        int sizeShadow = 0 , shadow = 0;
+        int hex = start;
+        while( hex != -1 )
         {
-            next[ p1 ] = cell[ next[p1] ].neighboor[d];
-            if( next[ p1 ] == -1 )  break;
-            if( tree[ next[p1] ].isMine == p1 )
+            //  Size
+            if( tree[hex].size > sizeShadow )
             {
-                k[ p1 ]--;
-                break;
+                sizeShadow = tree[hex].size;
+                shadow = tree[hex].size + 1;
+                player[ tree[hex].isMine ].renting =
+                    player[ tree[hex].isMine ].renting + sizeShadow;
             }
-            if( tree[ next[p1] ].isMine == p2 )
-            {
-                k[ p1 ]--;
-                k[ p2 ]--;
-                break;
-            }
-            if( next[ p1 ] == id2 )
-            {
-                k[ p2 ]--;
-            }
+
+            //  Neighboor
+            hex = cell[hex].neighboor[day];
+            shadow--;
+            if( shadow == 0 )   sizeShadow = 0;
         }
     }
+}
+
+List<int> h_seed(
+    int p1 , int p2 , int id1 , List<int> id2 ,
+    Node n , List<Cell> cell , List<Agent> player , List<Tree> tree )
+{
+    List<int> k = [ 0 , 0 ];
+
+    //  if( id2.contains(id1) ) return k;
+    //  Collision
+
+    //  Check F.S.M
+    if( player[p1].state == STARTING )
+    {
+        if( player[p1].day == 0 )   return k;
+        if( player[p1].day == 1 )   return k;
+    }
+
+    if( n.cost != 0 )
+        return k;
+
+    k[p1] = k[p1] - n.cost;                  //  Update cost, sun is point , no sun no point
+    k[p1] = k[p1] + kFUZZY_SHADOW[ id1 ] + 6;
+
+    for( int d = 0 ; d < 6 ; d++ )
+    {
+        for( final int hex in kFUZZY_NEIGH[id1][d] )
+        {
+            if( tree[hex].isMine == p1 )    k[p1] = k[p1] - 2;
+            if( tree[hex].isMine == p2 )
+            {
+                //  Depends of F.S.M.
+                ;
+            }
+            if( id2.contains(hex) )
+            {
+                //  Depends of F.S.M.
+                ;
+            }
+            //  One iteration only
+            break;
+        }
+    }
+    error("[${id1}] >> seed k ${k} id2 ${id2}");
     return k;
 }
 
 List<int> h_grow(
-    int p1 , int p2 , int id1 , int id2 ,
-    List<Node> n , List<Cell> cell , List<Agent> player , List<Tree> tree )
+    int p1 , int p2 , int id1 , List<int> id2 ,
+    Node n , List<Cell> cell , List<Agent> player , List<Tree> tree )
 {
     List<int> k = [ 0 , 0 ];
-    List<int> nDay = [ 0 , 0 , 0 , 0 , 0 , 0 ];
-    List<int> next = [ id1 , id2 ];
 
-    k[p1] = k[p1] - n[p1].cost;
+    int nDay = (24 - player[p1].day) ~/ 6 + 1;
+    k[p1] = k[p1] - n.cost;
 
-    for( int d = player[id1].day ; d <= 24 ; d++ )
+    if( tree[id1].size == 0 )
     {
-        nDay[ d % 6 ]++;
+        //  ...
+        k[p1] = k[p1] + n.cost;
     }
 
     for( int d = 0 ; d < 6 ; d++ )
     {
-        next[ p1 ] = id1;
-        next[ p2 ] = id2;
-        for( int l = 0 ; l < (tree[id1].size + 1) ; l++ )
+        int p = 0;
+        int g = nDay;
+        for( final int hex in kFUZZY_NEIGH[id1][d] )
         {
-            next[ p1 ] = cell[ next[p1] ].neighboor[d];
-            if( next[p1] == -1 )
+            if( tree[hex].isMine == p1 )
             {
-                k[ p1 ] = k[ p1 ] + nDay[ d ];
                 break;
             }
-            if( tree[ next[ p1 ] ].isMine == p1 )
+            if( tree[hex].isMine == p2 )
             {
-                if( tree[id1].size + 1 == tree[ next[p1] ].size ) {
-                    nDay[ d ] = 0;
-                }
-                else {
-                    nDay[ d ] = nDay[ d ] ~/ 2;
-                }
-                k[ p1 ] = k[ p1 ] + nDay[ d ];
-                break;
+                //  Depends of the F.S.M.
+                ;
             }
-            if( tree[ next[ p1 ] ].isMine == p2 )
+            if( id2.contains(hex) )
             {
-                if( tree[id1].size + 1 < tree[ next[p1] ].size ) {
-                    nDay[ d ] = nDay[ d ] ~/ 2;
-                }
-                k[ p1 ] = k[ p1 ] + nDay[ d ];
-                break;
+                //  Depends of the F.S.M.
+                ;
             }
+
+            if( p == kFUZZY_NEIGH[id1][d].length )
+                break;
+            p++;
+        }
+        k[p1] = k[p1] + g * p;
+    }
+    //error("[${id1}] >> grow k ${k} id2 ${id2}");
+    return k;
+}
+
+List<int> h_wait(
+    int p1 , int p2 , int id1 , List<int> id2 ,
+    Node n , List<Cell> cell , List<Agent> player , List<Tree> tree )
+{
+    List<int> k = [ 0 , 0 ];
+    //k[p1] = player[p1].sun;
+    error("[${id1}] >> wait k ${k} id2 ${id2}");
+    return k;
+}
+
+List<int> h_over(
+    int p1 , int p2 , int id1 , List<int> id2 ,
+    Node n , List<Cell> cell , List<Agent> player , List<Tree> tree )
+{
+    List<int> k = [ 0 , 0 ];
+
+    if( player[p1].state == ENDING )
+    {
+        int n = 0;
+        for( final _ in tree )
+            if( _.isMine == p1 && _.size == 3 )    n++;
+
+
+        error("h_over ENDING number $n 24 ${player[p1].day}");
+        if( n >= (24 - player[p1].day) )
+        {
+            k[p1] = 100;
         }
     }
-    return k;
-}
-
-List<int> h_wait(int p1 , int p2 , int id1 , int id2 , List<Node> n , List<Cell> cell , List<Agent> player , List<Tree> tree )
-{
-    List<int> k = [ 0 , 0 ];
-    return k;
-}
-
-List<int> h_over(int p1 , int p2 , int id1 , int id2 , List<Node> n , List<Cell> cell , List<Agent> player , List<Tree> tree )
-{
-    List<int> k = [ 0 , 0 ];
-    List<int> nDay = [ 0 , 0 , 0 , 0 , 0 , 0 ];
-    List<int> next = [ id1 , id2 ];
-
-    k[p1] = k[p1] - n[p1].cost;
-    k[p1] = k[p1] + (player[p1].nutrients + cell[id1].richness) * 3;
-
-    for( int d = player[id1].day ; d <= 24 ; d++ )
+    else
+    if( player[p1].state == SCORING )
     {
-        nDay[ d % 6 ]++;
-    }
+        int nDay = (24 - player[p1].day) ~/ 6 + 1;
 
-    for( int d = 0 ; d < 6 ; d++ )
-    {
-        next[ p1 ] = id1;
-        for( int l = 0 ; l < tree[id1].size ; l++ )
+        k[p1] = k[p1] - n.cost;
+        k[p1] = k[p1] + (player[p1].nutrients + cell[id1].richness) * 3;
+
+        //error("h_over $id1");
+        //error("h_over ${n.cost} ${player[p1].nutrients} ${cell[id1].richness}");
+
+        for( int d = 0 ; d < 6 ; d++ )
         {
-            if( next[p1] == -1 )    break;
-            if( tree[ next[p1] ].isMine == p1 )
+            int p = 0;
+            int g1 = nDay , g2 = 0;
+            for( final int hex in kFUZZY_NEIGH[id1][d] )
             {
-                nDay[ d ] = nDay[ d ] * tree[ next[p1] ].size;
-                k[p1] = k[p1] + nDay[ d ];
-                break;
+                if( tree[hex].isMine == p1 )
+                {
+                    p++;
+                    break;
+                }
+                if( tree[hex].isMine == p2 )
+                {
+                    //  Depends of the F.S.M.
+                    g2 = g2 + nDay;
+                    break;
+                }
+                if( id2.contains(hex) )
+                {
+                    //  Depends of the F.S.M.
+                    ;
+                }
+
+                if( p == kFUZZY_NEIGH[id1][d].length )
+                    break;
+                p++;
             }
-            if( tree[ next[p1] ].isMine == p2 )
-            {
-                nDay[ d ] = nDay[ d ] * tree[ next[p1] ].size;
-                k[p1] = k[p1] - nDay[ d ];
-                break;
-            }
-            if( next[p1] == id2 )
-            {
-                k[p1] = k[p1] - nDay[ d ];
-            }
+            //error("day $d hex ${kFUZZY_NEIGH[id1][d]} gain $g1 $g2 p $p");
+            k[p1] = k[p1] - 3 * g1 * p;
+            k[p2] = k[p2] + g2 ;
         }
     }
+
+    error("[${id1}] >> over k ${k} id2 ${id2}");
     return k;
 }
 
-int heuristic(
-    List<Function> f ,
-    List<Node> n , List<Cell> cell , List<Agent> player , List<Tree> tree )
+int heuristic2(
+    Function f , List<int> id2 ,
+    Node n , List<Cell> cell , List<Agent> player , List<Tree> tree )
 {
-    List<int> k = [ 0 , 0 ];
-    List<int> id = [ n[ kMINE ].p.last , n[ kOPP ].p.last ];
-
-    List<int> k1 =
-    f[kMINE]( kMINE , kOPP , id[kMINE] , id[kOPP] , n , cell , player , tree );
-
-    List<int> k2 =
-    f[kOPP]( kOPP , kMINE , id[kOPP] , id[kMINE] , n , cell , player , tree );
-
-    k[kMINE] = k1[kMINE] + k2[kMINE];
-    k[kOPP] = k1[kOPP] + k2[kOPP];
+    List<int> k =
+    f( kMINE , kOPP , n.p.last , id2 , n , cell , player , tree );
 
     return k[kMINE] - k[kOPP];
 }
-
 
 //  Warning add one parameter in parameter to know MINE or OPP
 void wait( List<int> p , List<Cell> cell , List<Agent> player , List<Tree> tree )
@@ -424,16 +527,20 @@ class Tree {
 }
 
 class Agent {
+
     int day = 0, nutrients = 0;
     int sun , score , asleep;
-    List<Tree> tree ;
+    late int state = STARTING;
 
-    Agent( {required List<Tree> tree} ) :
-    this.tree = tree , this.sun = 0 , this.score = 0 , this.asleep = 0;
+    //  Add state of agent
+    int p = -1, renting = 2, scoring = 0;
+
+    Agent() :
+    this.sun = 0 , this.score = 0 , this.asleep = 0;
 
     @override
     String toString() {
-        return "agent ${this.sun}/${this.score} ${this.tree}";
+        return "agent ${this.sun}/${this.score}";
     }
 
     void read( List<String> inputs )
@@ -442,18 +549,41 @@ class Agent {
         this.score = parse(inputs[1]);
         this.asleep = inputs.length == 2 ? 0 : parse(inputs[2]);
     }
+
+    void update_fsm( List<Cell> cell , Agent opp , List<Tree> tree )
+    {
+        //...
+        if( this.day < 4 )
+            this.state = STARTING;   //  WAIT, GROW, WAIT, SEED, GROW, WAIT
+        else
+        if( this.day > 19 )
+            this.state = ENDING;     //  COMPLETE, WAIT, COMPLETE, WAIT
+        else
+        if( this.scoring >= opp.scoring )
+            this.state = FARMING;    //  GROW, SEED
+
+        else
+        if( this.renting >= opp.renting )
+            this.state = SCORING;    //  COMPLETE, WAIT
+        else
+            this.state = NOISING;
+
+        error("STATE ${this.state}");
+    }
+
 }
 
 void main() {
 
     List inputs;
+    Node? best;
     int n = 0;
 
     List<Cell> cell = List.generate( 37 ,
     (i) => new Cell( inputs : ['0','0','0','0','0','0','0','0'] ) , growable : false);
 
     List<Agent> player = List.generate( 2 ,
-    (i) => new Agent( tree : [] ) , growable : false );
+    (i) => new Agent()..p = i , growable : false );
 
     List<Tree> tree = List.generate( 37 ,
     (i) => new Tree( inputs: [ "$i" , '0' , '-1' , '0' ]) , growable : false );
@@ -468,8 +598,10 @@ void main() {
     while (true)
     {
         //  Update
-        player[kMINE].day = parse(read()); // the game lasts 24 days: 0-23
-        player[kMINE].nutrients = parse(read()); // the base score you gain from the next COMPLETE action
+        player[kMINE].day = parse(read());
+        // the game lasts 24 days: 0-23
+        player[kMINE].nutrients = parse(read());
+        // the base score you gain from the next COMPLETE action
 
         player[kOPP].day = player[kMINE].day;
         player[kOPP].nutrients = player[kMINE].nutrients;
@@ -485,11 +617,19 @@ void main() {
             tree[ parse(inputs[0]) ].isDormant = parse(inputs[3]);
         }
 
+        //  Warning
+        if( best != null && best.f == complete )
+        {
+            tree[ best.p.last ] = new Tree(inputs: ['${best.p.last}','0','-1','0'] );
+        }
+
+        renting( cell , player , tree );
+        player[kMINE].update_fsm( cell , player[kOPP] , tree );
+
         n = parse(read()); // all legal actions
         for (int i = 0; i < n ; i++) {
-            List<String> possibleAction = read().split(' ');
-            //error(possibleAction);
-            // try printing something from here to start with
+            List<String> _ = read().split(' ');
+            //error(_);
         }
 
         //  State
@@ -498,93 +638,63 @@ void main() {
 
         for( final _ in q )
         {
-            error("DEBUG >> ${player[kMINE].sun} ${_.cost} $_");
+            //error("DEBUG >> MINE ${player[kMINE].sun} ${_.cost} $_");
+            ;
         }
 
-        List<int> m = List.generate( q.length , (i) => 0 , growable : false );
-        List<List<int>> h = List.generate( q.length , (i) =>
-        List.generate( o.length , (i) => 0 , growable : false ) , growable: false );
+        //  Delete wait
+        o.removeLast();
+        List<int> id2 = [];
+        for( final _ in o )
+        {
+            //error("DEBUG >> OPP ${player[kOPP].sun} ${_.cost} $_");
+            id2.add( _.p.last );
+            ;
+        }
 
-        int best_id = q.length - 1;    //  Choose wait
+        List<int> m = [];
+
+        best = q.last;    //  Choose wait
         int best_score = 0;
 
         //q.last.p.removeLast();
-        for( int row = 0 ; row < q.length ; row++ )
+
+        error("DAY ${player[kMINE].day} SUN ${player[kMINE].sun} SCORE ${player[kMINE].score}");
+        String text = "[${player[kMINE].scoring},${player[kMINE].renting},${player[kOPP].scoring},${player[kOPP].renting}]";
+
+        for( final _ in q )
         {
-            List<Function> f = [];
-            if( q[row].f == seed )      f.add(h_seed);
-            if( q[row].f == grow )      f.add(h_grow);
-            if( q[row].f == complete )  f.add(h_over);
-            if( q[row].f == wait )      f.add(h_wait);
-
-            for( int col = 0 ; col < o.length ; col++ )
+            int k = 0;
+            if( _.f == seed )
             {
-                List<Node> n = [ q[row] , o[col] ];
-                if( o[col].f == seed )      f.add(h_seed);
-                if( o[col].f == grow )      f.add(h_grow);
-                if( o[col].f == complete )  f.add(h_over);
-                if( o[col].f == wait )      f.add(h_wait);
-
-                int k = heuristic(f,n,cell,player,tree);
-                m[row] = m[row] + k;
-                f.removeLast();
+                k = heuristic2( h_seed , id2 , _ , cell , player , tree );
             }
-            m[row] = m[row] ~/ o.length;
-            if( m[row] > best_score )
+            if( _.f == grow )
             {
-                best_score = m[row];
-                best_id = row;
+                k = heuristic2( h_grow , id2 , _ , cell , player , tree );
             }
-            error(h[row]);
+            if( _.f == complete )
+            {
+                k = heuristic2( h_over , id2 , _ , cell , player , tree );
+            }
+            if( _.f == wait )
+            {
+                k = heuristic2( h_wait , id2 , _ , cell , player , tree );
+                _.p.removeLast();
+            }
+            if( k > best_score )
+            {
+                best = _;
+                best_score = k;
+            }
+            m.add( k );
         }
 
         error(m);
-
+        //print("$best $text");
 
         //  Out
-        if( q.length == 1 )
-        {
-            q.last.p.removeLast();
-            print(q.last);
-        }
-        else
-        {
-            q.removeLast();
-
-            Node? n;
-            for( final _ in q )
-            {
-                if( n != null )
-                {
-                    //  Check SEED
-                    if( _.f == seed )
-                    {
-                        if( _.cost > 1 )                continue;   //  Already two nuts
-                        if( player[kMINE].day > 10 && _.cost > 0)   continue;
-                        if( n.p.last > _.p.last )       n = _;
-                    }
-
-                    //  Check GROWS
-                    if( _.f == grow )
-                    {
-                        if( n.p.last > _.p.last )       n = _;
-                    }
-                    //  Check COMPLETE
-                    if( _.f == complete )
-                    {
-                        if( player[kMINE].day < 15 )    continue;   //  At end
-                        if( n.p.last > _.p.last )       n = _;
-                    }
-                    ;
-                }
-                else
-                {
-                    n = _;
-                }
-            }
-
-            print(n);
-        }
+        print(best);
 
         // GROW cellIdx | SEED sourceIdx targetIdx | COMPLETE cellIdx | WAIT <message>
         //print('WAIT');
