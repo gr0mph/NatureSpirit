@@ -4,12 +4,12 @@
 
 ***CodinGame Nature Spirit Challenge***
 
-![](picture/league-wood2.png)![](picture/league-wood2.png)![](picture/league_bronze_03.png)
+![](picture/league_wood.png)![](picture/league_wood.png)![](picture/league_bronze_03.png)![](picture/league_silver_03.png)![](picture/league_gold_03.png)
 
 **Starting**
 
 - [x] Complete, select the best cells.
-- [ ] Grows, select the best cells.
+- [x] Grows, select the best cells.
 - [x] Add class and specific object such like Tree, Cell and Agent.
 - [x] Add node that allows simulation
 - [x] Add method state that search all possible action for one player.
@@ -18,10 +18,10 @@
 
 - [x] Code an heuristic evaluation action
 - [x] Choose best action
-- [ ] Road1 : Use state
-- [ ] Road2 : Use simulator
+- [x] Road1 : Use state
+- [x] Road2 : Use simulator
 
 **Tree**
 
-- [ ] Need simulator
-- [ ] Need node
+- [x] Need simulator
+- [x] Need node
