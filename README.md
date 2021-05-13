@@ -25,3 +25,8 @@
 
 - [x] Need simulator
 - [x] Need node
+
+**Compile Dart and Launch**
+
+- [x] dart compile exe main2.dart
+- [x] ./main2.exe < map.txt
