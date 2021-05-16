@@ -30,3 +30,6 @@
 
 - [x] dart compile exe main2.dart
 - [x] ./main2.exe < map.txt
+
+https://github.com/s-vivien/CGBenchmark
+https://int8.io/monte-carlo-tree-search-beginners-guide/
