@@ -7,3 +7,4 @@
 | **Run from local** | [GitHub](https://github.com/s-vivien/CGBenchmark) |
 | MonteCarloTreeSearch | [Blog](https://int8.io/monte-carlo-tree-search-beginners-guide/)|
 | Beam search | |
+| Hashing | [Wiki](https://en.wikipedia.org/wiki/Zobrist_hashing) |
