@@ -8,3 +8,4 @@
 | MonteCarloTreeSearch | [Blog](https://int8.io/monte-carlo-tree-search-beginners-guide/)|
 | Beam search | |
 | Hashing | [Wiki](https://en.wikipedia.org/wiki/Zobrist_hashing) |
+| Hashing and == operator | [Stack](https://stackoverflow.com/questions/20577606/whats-a-good-recipe-for-overriding-hashcode-in-dart) |

@@ -15,12 +15,6 @@ final List<List<int>> kSIMSUN =
     [ 25,26,27,28,29,30,31 ],   [ 28,29,30,31,32,33,34 ],   [ 31,32,33,34,35,36,19 ],
     [ 34,35,36,19,20,21,22 ],   [ 19,20,21,22,23,24,25 ],   [ 22,23,24,25,26,27,28 ],
 ];
-final List<int> kFUZZY_SHADOW =
-[   18,
-    15, 15, 15, 15, 15, 15,
-    9, 10, 9, 10, 9, 10, 9, 10, 9, 10, 9, 10,
-    3, 4, 4, 3, 4, 4, 3, 4, 4, 3, 4, 4, 3, 4, 4, 3, 4, 4,
-];
 final List<List<List<int>>> kFUZZY_NEIGH =
 [
     [ [ 1, 7,19], [ 2, 9,22], [ 3,11,25], [ 4,13,28], [ 5,15,31], [ 6,17,34] ],
@@ -66,59 +60,24 @@ final List<List<List<int>>> kFUZZY_NEIGH =
 ];
 final int STARTING = 0, FARMING = 1, NOISING = 2, SCORING = 3, ENDING = 4;
 
+int nbRoll = 0;
+int nbMine = 0;
+int nbOpp = 0;
+
+//  Time
+Stopwatch stopwatch = new Stopwatch();
+int time = 700;
+int maxDay = 0;
 
 String read() {
   String? s = stdin.readLineSync();
   return s == null ? '' : s;
 }
 
-void simulate( List<Cell> cell , List<Agent> player , List<Tree> tree )
-{
-    int nComplete = 0;
-
-    //  Reset
-    for( final c in tree )
-    {
-        c.isDormant = 0;
-
-        if( c.seed[kOPP] > 0 && c.seed[kMINE] > 0 )
-        {
-            player[kOPP].sun = player[kOPP].sun + c.seed[kOPP];
-            player[kMINE].sun = player[kMINE].sun + c.seed[kMINE];
-        }
-        else
-        if( c.seed[kOPP] > 0 )  c.isMine = kOPP;
-        else
-        if( c.seed[kMINE] > 0 ) c.isMine = kMINE;
-
-        c.seed[kOPP] = 0;
-        c.seed[kMINE] = 0;
-
-        if( c.complete == true )
-        {
-            player[ c.isMine ].score = player[ c.isMine ].nutrients + cell[ c.index ].richness;
-            nComplete++;
-            c.complete = false;
-        }
-    }
-
-    if( nComplete > 0 )
-    {
-        player[kOPP].nutrients = player[kOPP].nutrients - nComplete;
-        player[kMINE].nutrients = player[kMINE].nutrients - nComplete;
-    }
-
-    ;
-
-    //  Update sun
-    //  int sun = (player[kMINE].day + 1) % 6;
-}
-
 List<Node> state( int isMine , List<Cell> cell , List<Agent> player , List<Tree> tree )
 {
     List<Node> q = [];
     Node n;
-
     List<int> cost = [ 0 , 1 , 3 , 7 , 4 ];
 
     for( final c in tree )
@@ -171,7 +130,7 @@ List<Node> state( int isMine , List<Cell> cell , List<Agent> player , List<Tree>
     }
 
     //  Add wait
-    n = new Node(f: wait, a:"WAIT", p: [isMine] )..cost = 0..heuristic = h_over;
+    n = new Node(f: wait, a:"WAIT", p: [isMine] )..cost = 0..heuristic = h_wait;
     q.add( n );
 
     //  Update cost
@@ -268,7 +227,7 @@ List<int> h_seed(
             i++;
         }
     }
-    error("[${id1}] >> seed k ${k} id2 ${id2}");
+    //error("[${id1}] >> seed k ${k} id2 ${id2}");
     return k;
 }
 
@@ -340,7 +299,7 @@ List<int> h_wait(
 {
     List<int> k = [ 0 , 0 ];
     //k[p1] = player[p1].sun;
-    error("[${id1}] >> wait k ${k} id2 ${id2}");
+    //error("[${id1}] >> wait k ${k}");
     return k;
 }
 
@@ -404,19 +363,20 @@ List<int> h_over(
         }
     }
 
-    error("[${id1}] >> over k ${k} id2 ${id2}");
+    //error("[${id1}] >> over k ${k} id2 ${id2}");
     return k;
 }
 
-//  Obsolete
-int heuristic2(
-    Function f , List<int> id2 ,
-    Node n , List<Cell> cell , List<Agent> player , List<Tree> tree )
+void bug(Node n , List<Cell> cell , List<Agent> player , List<Tree> tree )
 {
-    List<int> k =
-    f( kMINE , kOPP , n.p.last , id2 , n , cell , player , tree );
-
-    return k[kMINE] - k[kOPP];
+    error("BUG SIMULATE TURN");
+    for( final _ in n.p )
+    {
+        error("$_ tree [${tree[_]}]");
+    }
+    error(player);
+    error("node ${n} cost ${n.cost}");
+    print("BUG SIMULATE TURN");
 }
 
 //  Warning add one parameter in parameter to know MINE or OPP
@@ -430,9 +390,11 @@ void grow( Node n , List<int> p , List<Cell> cell , List<Agent> player , List<Tr
 {
     int id1 = p[0], p1 = tree[ id1 ].isMine ;
 
-    //  Update
+    //  Update tree
     tree[ id1 ].size++;
     tree[ id1 ].isDormant = 1;
+
+    //  Update player
     player[ p1 ].sun = player[ p1 ].sun - n.cost;
 }
 
@@ -440,22 +402,29 @@ void seed( Node n , List<int> p , List<Cell> cell , List<Agent> player , List<Tr
 {
     int id1 = p[0], id2 = p[1] , p1 = tree[ id1 ].isMine ;
 
-    //  Update
+    //  Update tree
     tree[ id1 ].isDormant = 1;
     tree[ id2 ].isDormant = 1;
-    tree[ id1 ].isMine = tree[ id2 ].isMine;
+    tree[ id2 ].isMine = tree[ id1 ].isMine;
+
+    //  Update player
     player[ p1 ].sun = player[ p1 ].sun - n.cost;
+
 }
 
 void complete( Node n , List<int> p , List<Cell> cell , List<Agent> player , List<Tree> tree )
 {
     int id1 = p[0], p1 = tree[ id1 ].isMine ;
 
-    player[p1].score = player[p1].score + player[p1].nutrients + cell[id1].richness;
-
+    //  Update tree
     tree[id1].size = 0;
     tree[id1].isMine = -1;
     tree[id1].isDormant = 0;
+
+    //  Update player
+    player[p1].score = player[p1].score + player[p1].nutrients + cell[id1].richness;
+    player[p1].sun = player[p1].sun - 4;
+
 }
 
 class Node {
@@ -476,12 +445,6 @@ class Node {
         this.turn = f; this.action = a ; this.p = p;
         this.cost = -1;
     }
-
-    //  Obsolete
-    //void update( List<Cell> cell , List<Agent> player , List<Tree> tree )
-    //{
-    //    this.f( this , this.p , cell , player , tree );
-    //}
 
     @override
     String toString() {
@@ -559,7 +522,8 @@ class Agent {
 
     @override
     String toString() {
-        return "agent ${this.sun}/${this.score}";
+        return "(${this.day},${this.nutrients},${this.score},${this.sun})";
+        //return "(${this.score},${this.sun})";
     }
 
     void read( List<String> inputs )
@@ -591,7 +555,7 @@ class Agent {
         else
             this.state = NOISING;
 
-        error("STATE ${this.state}");
+        //error("STATE ${this.state}");
     }
 
 }
@@ -600,6 +564,11 @@ void simulateTurn( Node n1 , Node n2 , List<Cell> cell , List<Agent> player , Li
 {
     if( n1.turn == seed && n2.turn == seed && n1.p.last == n2.p.last )
     {
+        //  Update tree
+        tree[ n1.p[0] ].isDormant = 1;
+        tree[ n1.p[0] ].isDormant = 1;
+
+        //  Update player
         player[kMINE].sun = player[kMINE].sun + n1.cost;
         player[kOPP].sun = player[kOPP].sun + n2.cost;
     }
@@ -652,16 +621,11 @@ class NatureSpirit {
     List<Agent> get player => _player;
     List<Tree> get tree => _tree;
 
-    List<Node> q1 = [];
-    List<Node> q2 = [];
+    List<Node> q1_play = [] , o2_play = [];
+
+    //List<Node> q1_rest = [] , o2_rest = [];
 
     Node? done;
-
-    void set tree( List<Tree> t )
-    {
-        this.tree = List.generate( t.length ,
-        (i) => new Tree.fromTree( t[i] ) , growable : false );
-    }
 
     void set player( List<Agent> p )
     {
@@ -669,15 +633,23 @@ class NatureSpirit {
         (i) => new Agent.fromAgent( p[i] ) , growable : false );
     }
 
+    void set tree( List<Tree> t )
+    {
+        this._tree = List.generate( t.length ,
+        (i) => new Tree.fromTree( t[i] ) , growable : false );
+    }
+
     void set cell( List<Cell> c )
     {
-        this._cell = List.generate( c.length ,
-        (i) => new Cell.fromCell( c[i] ) , growable : false );
+        this._cell = c;
+        //this._cell = List.generate( c.length ,
+        //(i) => new Cell.fromCell( c[i] ) , growable : false );
     }
 
     List<Node> natureTurn( Node n1 , Node n2 )
     {
-        int  best1 = -1 , best2 = -1 , k = -1;
+        int  best1 = -1 , best2 = -1 ;
+        List<int> k = [-1,-1];
 
         simulateTurn( n1 , n2 , this.cell , this.player , this.tree );
 
@@ -698,9 +670,9 @@ class NatureSpirit {
             {
                 k = _.heuristic( kMINE , kOPP , _.p.last , id2 , _ ,
                 this.cell , this.player , this.tree );
-                if( k > best1 )
+                if( (k[kMINE] - k[kOPP]) > best1 )
                 {
-                    best1 = k;
+                    best1 = (k[kMINE] - k[kOPP]);
                     n1 = _;
                 }
             }
@@ -716,9 +688,9 @@ class NatureSpirit {
             {
                 k = _.heuristic( kOPP , kMINE , _.p.last , id2 , _ ,
                 this.cell , this.player , this.tree );
-                if( k > best2 )
+                if( (k[kMINE] - k[kOPP]) > best2 )
                 {
-                    best2 = k;
+                    best2 = (k[kMINE] - k[kOPP]);
                     n2 = _;
                 }
             }
@@ -743,9 +715,18 @@ class MonteCarloTreeSearch {
     List<int> w1 = [], w2 = [];
     List<int> n1 = [], n2 = [];
 
-    List<Node> play = [];
+    List<List<int>> _w = [];
+    List<List<int>> _n = [];
+
+    List<Node> q1_start = [], o2_start = [];
+    //List<Node> q_rest = [], o_rest = [];
 
     NatureSpirit info = new NatureSpirit();
+
+    @override
+    String toString() {
+        return "($i1,$i2,${p?._w[i1][i2]},${p?._n[i1][i2]})";
+    }
 
     int get n {
         int n = 0;
@@ -758,18 +739,60 @@ class MonteCarloTreeSearch {
         return n;
     }
 
-    MonteCarloTreeSearch nature(int i1)
+    void mctsInitState( )
     {
-        int i2 = Random().nextInt( w2.length );
+        //this.q1_start = state( kMINE , this.info.cell , this.info.player , this.info.tree );
+        //this.o2_start = state( kOPP , this.info.cell , this.info.player , this.info.tree );
 
-        this.child[i1][i2] = new MonteCarloTreeSearch()..p = this..i1 = i1..i2 = i2
-        ..play = [ this.info.q2[i2] , this.info.q1[i1] ]
-        ..day = this.day;
+        //  Reduce number of case / delete SEED because it is take after
+        List<Node> q1 = state( kMINE , this.info.cell , this.info.player , this.info.tree );
+        List<Node> o2 = state( kOPP , this.info.cell , this.info.player , this.info.tree );
 
-        this.child[i1][i2]?.info = new NatureSpirit()
+        for ( final _ in q1 )
+        {
+            if( _.turn != seed )  this.q1_start.add(_);
+        }
+        for ( final _ in o2 )
+        {
+            if( _.turn != seed )  this.o2_start.add(_);
+        }
+        if( this.q1_start.length > 1 )  this.q1_start.removeLast();
+        if( this.o2_start.length > 1 )  this.o2_start.removeLast();
+
+        //  Depends of F.S.M.
+        //  ...
+
+        this.w1 = List.generate( this.q1_start.length , (i) => 0 , growable : false );
+        this.n1 = List.generate( this.q1_start.length , (i) => 0 , growable : false );
+
+        this.w2 = List.generate( this.o2_start.length , (i) => 0 , growable : false );
+        this.n2 = List.generate( this.o2_start.length , (i) => 0 , growable : false );
+
+        //  Debug
+        this._w = List.generate( this.q1_start.length ,
+        (i) => List.generate( this.o2_start.length , (i) => 0 , growable : false ) , growable: false );
+
+        this._n = List.generate( this.q1_start.length ,
+        (i) => List.generate( this.o2_start.length , (i) => 0 , growable : false ) , growable: false );
+
+        this.child = List.generate( this.q1_start.length ,
+        (i) => List.generate( this.o2_start.length , (i) => null , growable : false ) , growable : false );
+    }
+
+    MonteCarloTreeSearch nature( int i1 , int i2 )
+    {
+        MonteCarloTreeSearch _  = new MonteCarloTreeSearch()..p = this..i1 = i1..i2 = i2
+        ..day = this.day + 1;
+
+        _.info = new NatureSpirit()
         ..cell = this.info.cell ..player = this.info.player ..tree = this.info.tree;
 
-        return this.child[i1][i2] ?? this ;
+        //  First node played
+        _.info.q1_play.add( this.q1_start[i1] );
+        _.info.o2_play.add( this.o2_start[i2] );
+
+        this.child[i1][i2] = _;
+        return _;
     }
 
     //  Select best child for mine and for opp
@@ -777,17 +800,32 @@ class MonteCarloTreeSearch {
     {
         MonteCarloTreeSearch _ = this;
 
+        if( this.day == 24 )
+        {
+            return this;
+        }
+
         while( _.n1.length > 0 )
         {
+            if( _.day == 24 )
+                return _;
+
             for( int i1 = 0 ; i1 < _.n1.length ; i1++ )
-                if( _.n1[i1] == 0 )
-                    return _.nature( i1 );
+            {
+                if( _.n1[i1] == 0 ) {
+                    int i2 = Random().nextInt( _.w2.length );
+                    _ = _.nature( i1 , i2 );
+                    return _;
+                    //return _.nature( i1 , Random().nextInt( _.w2.length ) );
+                }
+            }
 
             List<double> weight = List.generate( _.n1.length ,
             (i1) => _.w1[i1] / _.n1[i1] + c * sqrt ( 2 * _.n / _.n1[i1] ) );
 
             double wMax = -0.1;
             int iMax = -1;
+
             for( int i = 0 ; i < weight.length ; i++ )
             {
                 if( wMax < weight[i] ) {
@@ -796,50 +834,46 @@ class MonteCarloTreeSearch {
                 }
             }
 
-            _ = _.nature( iMax );
+            int i2 = Random().nextInt( _.w2.length );
+            if( _.child[iMax][i2] == null )
+            {
+                _ = _.nature( iMax , i2 );
+                return _;
+            }
+            _ = _.child[iMax][i2] ?? _ ;
+
         }
 
-        _.info.q1 = state( kMINE , _.info.cell , _.info.player , _.info.tree );
-        _.info.q2 = state( kOPP , _.info.cell , _.info.player , _.info.tree );
-
-        //  Depends of F.S.M.
-        //  ...
-
-        _.w1 = List.generate( _.info.q1.length , (i) => 0 , growable : false );
-        _.n1 = List.generate( _.info.q1.length , (i) => 0 , growable : false );
-
-        _.w2 = List.generate( _.info.q2.length , (i) => 0 , growable : false );
-        _.n2 = List.generate( _.info.q2.length , (i) => 0 , growable : false );
-
-        _.child = List.generate( _.info.q1.length ,
-        (i) => List.generate( _.info.q2.length , (i) => null , growable : false ) , growable : false );
-
-        int i1 = 0;
-        return _.nature( i1 );
+        //  Dead-code
+        return _;
     }
 
     MonteCarloTreeSearch expansion()
     {
-        if( this.info.player[kMINE].day == 24 ) return this;
-
-        error("expansion ${this.day} ${this.p?.day}");
-
-        if( this.day == this.p?.day )
+        if( this.day == 24 )
         {
-            //  Expand day++
-            this.day++;
-            Node n1 = this.play[kMINE] , n2 = this.play[kOPP];
+            return this;
+        }
 
-            while( n1.turn != wait && n2.turn != wait )
-            {
-                error("expansion ${this.info.tree[25]}");
+        //  Expand day
+        Node n1 = this.info.q1_play.last , n2 = this.info.o2_play.last;
 
-                List<Node> r = this.info.natureTurn( n1 , n2 );
-                n1 = r[kMINE];
-                n2 = r[kOPP];
-            }
+        while( n1.turn != wait || n2.turn != wait )
+        {
+            List<Node> r = this.info.natureTurn( n1 , n2 );
+            n1 = r[kMINE];
+            n2 = r[kOPP];
+            this.info.q1_play.add( n1 );
+            this.info.o2_play.add( n2 );
+        }
 
-            simulateDay( this.info.cell , this.info.player , this.info.tree );
+        simulateDay( this.info.cell , this.info.player , this.info.tree );
+
+        this.mctsInitState();
+
+        if( maxDay < this.day )
+        {
+            maxDay = this.day;
         }
 
         return this;
@@ -847,43 +881,39 @@ class MonteCarloTreeSearch {
 
     int simulation( )
     {
+        if( this.day == 24 )
+        {
+            return this.info.player[kMINE].score - this.info.player[kOPP].score;
+        }
+
+        nbRoll++;
+
         NatureSpirit roll = new NatureSpirit()
         ..cell = this.info.cell ..player = this.info.player ..tree = this.info.tree ;
 
-        Node? node1, node2;
+        int count = 0;
 
         while( roll.player[kMINE].day < 24 )
         {
+            //  Random for first turn of each day
+            List<Node> q =
+            state( kMINE , roll.cell , roll.player , roll.tree );
+
+            //  Finite State Machine
+            //  ...
+
+            Node n1 = q[ Random().nextInt( q.length ) ];
 
             //  Random for first turn of each day
-            if( node1?.turn != wait )
-            {
-                List<Node> q =
-                state( kMINE , roll.cell , roll.player , roll.tree );
+            List<Node> o =
+            state( kOPP , roll.cell , roll.player , roll.tree );
 
-                //  Finite State Machine
-                //  ...
+            //  Finite State Machine
+            //  ...
 
-                int i = Random().nextInt( q.length );
-                node1 = q[i];
-            }
+            Node n2 = o[ Random().nextInt( o.length ) ];
 
-            //  Random for first turn of each day
-            if( node2?.turn != wait )
-            {
-                List<Node> o =
-                state( kOPP , roll.cell , roll.player , roll.tree );
-
-                //  Finite State Machine
-                //  ...
-
-                int i = Random().nextInt( o.length );
-                node2 = o[i];
-            }
-            Node n1 = node1 ?? new Node(f: wait, a:"WAIT", p: [kMINE] )..cost = 0..heuristic = h_over;
-            Node n2 = node1 ?? new Node(f: wait, a:"WAIT", p: [kOPP] )..cost = 0..heuristic = h_over;
-
-            while( n1.turn != wait && n2.turn != wait )
+            while( n1.turn != wait || n2.turn != wait )
             {
                 List<Node> r = roll.natureTurn( n1 , n2 );
                 n1 = r[kMINE];
@@ -898,15 +928,24 @@ class MonteCarloTreeSearch {
 
     void backpropagation( int result )
     {
+        MonteCarloTreeSearch child = this;
         MonteCarloTreeSearch? _ = this.p;
 
         while( _ != null )
         {
-            if( result > 0 )    _.w1[ _.i1 ]++;
-            else                _.w2[ _.i2 ]++;
-            _.n1[ _.i1 ]++;
-            _.n2[ _.i2 ]++;
 
+            if( result > 0 ){
+                _.w1[ child.i1 ]++;
+                _._w[ child.i1 ][ child.i2 ]++;
+            }
+            else
+                _.w2[ child.i2 ]++;
+
+            _.n1[ child.i1 ]++;
+            _.n2[ child.i2 ]++;
+            _._n[ child.i1 ][ child.i2 ]++;
+
+            child = _;
             _ = _.p;
         }
     }
@@ -918,7 +957,7 @@ void main() {
     List inputs;
     Node? best;
     int n = 0;
-    int time = 900;
+    int maxCounter = 500;
 
     MonteCarloTreeSearch __mcts__ = new MonteCarloTreeSearch();
 
@@ -931,32 +970,65 @@ void main() {
     List<Tree> tree = List.generate( 37 ,
     (i) => new Tree( inputs: [ "$i" , '0' , '-1' , '0' ]) , growable : false );
 
+    String debug = "";
+
+    //debug = read(); error(debug);
     n = parse(read()); // 37
+    //n = parse(debug);
+
+    //  Time
+    stopwatch.start();
+    time = 800;
+    maxCounter = 5000;
+
     for (int i = 0; i < n; i++)
     {
+        //debug = read(); error(debug);
         cell[i] = new Cell( inputs : read().split(' ') );
+        //cell[i] = new Cell( inputs : debug.split(' ') );
     }
+
+    bool chooseMcts = true;
 
     // game loop
     while (true)
     {
-        Stopwatch stopwatch = new Stopwatch()..start();
-
         //  Update
+        //debug = read(); error(debug);
+
         player[kMINE].day = parse(read());
-        // the game lasts 24 days: 0-23
+        //player[kMINE].day = parse(debug);
+
+        if( time < 100 )
+        {
+            //  Reset Timer
+            stopwatch.reset();
+        }
+
+        //debug = read(); error(debug);
         player[kMINE].nutrients = parse(read());
-        // the base score you gain from the next COMPLETE action
+        //player[kMINE].nutrients = parse(debug);
 
         player[kOPP].day = player[kMINE].day;
         player[kOPP].nutrients = player[kMINE].nutrients;
 
+        //debug = read(); error(debug);
         player[kMINE].read( read().split(' ') );
-        player[kOPP].read( read().split(' ') );
+        //player[kMINE].read( debug.split(' ') );
 
+        //debug = read(); error(debug);
+        player[kOPP].read( read().split(' ') );
+        //player[kOPP].read( debug.split(' ') );
+
+        //debug = read(); error(debug);
         int n = parse(read());
+        //int n = parse(debug);
+
         for (int i = 0; i < n ; i++) {
+            //debug = read(); error(debug);
             inputs = read().split(' ');
+            //inputs = debug.split(' ');
+
             tree[ parse(inputs[0]) ].size = parse(inputs[1]);
             tree[ parse(inputs[0]) ].isMine = parse(inputs[2]);
             tree[ parse(inputs[0]) ].isDormant = parse(inputs[3]);
@@ -971,10 +1043,14 @@ void main() {
         renting( cell , player , tree );
         player[kMINE].update_fsm( cell , player[kOPP] , tree );
 
+        //debug = read(); error(debug);
         n = parse(read()); // all legal actions
+        //n = parse(debug); // all legal actions
+
         for (int i = 0; i < n ; i++) {
+            //debug = read(); error(debug);
             List<String> _ = read().split(' ');
-            //error(_);
+            //List<String> _ = debug.split(' ');
         }
 
         //  State
@@ -983,7 +1059,6 @@ void main() {
 
         for( final _ in q )
         {
-            //error("DEBUG >> MINE ${player[kMINE].sun} ${_.cost} $_");
             ;
         }
 
@@ -992,8 +1067,6 @@ void main() {
         List<int> id2 = [];
         for( final _ in o )
         {
-            //error("DEBUG >> OPP ${player[kOPP].sun} ${_.cost} $_");
-            id2.add( _.p.last );
             ;
         }
 
@@ -1002,47 +1075,64 @@ void main() {
         best = q.last;    //  Choose wait
         int best_score = 0;
 
-        //q.last.p.removeLast();
-
-        error("DAY ${player[kMINE].day} SUN ${player[kMINE].sun} SCORE ${player[kMINE].score}");
-        String text = "[${player[kMINE].scoring},${player[kMINE].renting},${player[kOPP].scoring},${player[kOPP].renting}]";
+        //String text = "[${player[kMINE].scoring},${player[kMINE].renting},${player[kOPP].scoring},${player[kOPP].renting}]";
 
         for( final _ in q )
         {
-            List<int> k =
+            List<int> kc =
             _.heuristic( kMINE , kOPP , _.p.last , id2 , _ , cell , player , tree );
 
             if( _.turn == wait )
                 _.p.removeLast();
 
-            if( k[kMINE] - k[kOPP] > best_score )
+            if( (kc[kMINE] - kc[kOPP]) > best_score )
             {
                 best = _;
-                best_score = k[kMINE] - k[kOPP];
+                best_score = (kc[kMINE] - kc[kOPP]);
             }
-            m.add( k[kMINE] - k[kOPP] );
+            m.add( (kc[kMINE] - kc[kOPP]) );
         }
 
-        error(m);
-        //print("$best $text");
+        //error(m);
+
 
         //  MonteCarloTreeSearch init or update
-        //if( __mcts__.info.cell.length == 0 )
-        //{
-        //    __mcts__.info.cell = cell;
-        //    __mcts__.info.player = player;
-        //    __mcts__.info.tree = tree;
-        //}
-        //else
-        //if( __mcts__.info.player[kMINE].day != player[kMINE].day )
-        //{
+        if( __mcts__.info.cell.length == 0 )
+        {
+            __mcts__.info.cell = cell;
+            __mcts__.info.player = player;
+            __mcts__.info.tree = tree;
+
+            //  Create state and child
+            __mcts__.mctsInitState( );
+
+            //error("MINE ${__mcts__.q1_start.length} node ${__mcts__.q1_start}");
+            //error("_OPP ${__mcts__.o2_start.length} node ${__mcts__.o2_start}");
+
+        }
+        else
+        if( __mcts__.day != player[kMINE].day )
+        {
             //  Search the MCTS that is most near of evalutaion
-        //    ;
+            //error("search mcts");
+            __mcts__ = new MonteCarloTreeSearch()..day = player[kMINE].day;
+
+            __mcts__.info.cell = cell;
+            __mcts__.info.player = player;
+            __mcts__.info.tree = tree;
+
+            //  Create state and child
+            __mcts__.mctsInitState( );
+
+            //error("MINE ${__mcts__.q1_start.length} node ${__mcts__.q1_start}");
+            //error("_OPP ${__mcts__.o2_start.length} node ${__mcts__.o2_start}");
+
+            //  Choose MCTS
+            chooseMcts = true;
 
             //  Update
-        //    ;
-        //}
-        error("Length Cell ${__mcts__.info.cell.length} Player ${__mcts__.info.player.length} Tree ${__mcts__.info.tree.length}");
+            ;
+        }
 
         //  MonteCarlo TreeSearch
         //  Update state
@@ -1050,31 +1140,87 @@ void main() {
 
 
         //  MonteCarloTreeSearch
-        while( stopwatch.elapsed.inMilliseconds < time )
+        int counter = 0;
+        while( stopwatch.elapsedMilliseconds < time )
         {
-            //  Best child
-            //MonteCarloTreeSearch _ = __mcts__.selection( 1.41 );
-
-            //  Expand turn
-            //_ = _.expansion();
-
-            //  Random sequence
-            //int k = _.simulation();
-
-            //  Back propagate
-            //_.backpropagation( k );
-
             break;
 
+            //  Best child
+            MonteCarloTreeSearch _ = __mcts__.selection( 1.41 );
+
+            if( stopwatch.elapsedMilliseconds >= time )
+            {
+                break;
+            }
+
+            //  Expand turn
+            _ = _.expansion();
+
+            if( stopwatch.elapsedMilliseconds >= time )
+            {
+                break;
+            }
+
+            //  Random sequence
+            int k = _.simulation();
+            //int k = 0;
+
+            if( stopwatch.elapsedMilliseconds >= time )
+            {
+                break;
+            }
+
+            //  Back propagate
+            _.backpropagation( k );
+
+            if( stopwatch.elapsedMilliseconds >= time )
+            {
+                break;
+            }
+
+            if( counter >= maxCounter )  break;
+            counter++;
         }
 
-        error("time ${stopwatch.elapsed.inMilliseconds}");
+        for( int i = 0 ; i < __mcts__.w1.length ; i++ )
+            error("[${__mcts__.w1[i]},${__mcts__.n1[i]}] ${__mcts__.q1_start[i]} ${__mcts__.child[i]}");
+
+
+        String textTime = "${stopwatch.elapsed.inMilliseconds}";
 
         //  Select first best child w/n near 1
-        time = 90;
 
         //  Out
-        print(best);
+        //print(best);
+        nbMine = __mcts__.n1.length;
+        nbOpp = __mcts__.n2.length;
+
+        chooseMcts = false;
+
+        if( chooseMcts == false )
+        {
+            print("$best [$textTime,$nbRoll,$nbMine,$nbOpp]");
+        }
+        else
+        {
+            double ratioMax = -1, current = -1;
+            Node best2 = best ?? q.last;  //  Choose wait
+            for( int i = 0 ; i < __mcts__.w1.length ; i++ )
+            {
+                current = __mcts__.w1[i] / __mcts__.n1[i];
+                if( current > ratioMax )
+                {
+                    ratioMax = current;
+                    best2 = __mcts__.q1_start[i];
+                }
+            }
+            error("$best [$textTime,$nbRoll,$nbMine,$nbOpp]");
+            print("$best2 [$textTime,$nbRoll,$nbMine,$nbOpp] mcts");
+            chooseMcts = false;
+        }
+
+        time = 70;
+        maxCounter = 1000;
 
         // GROW cellIdx | SEED sourceIdx targetIdx | COMPLETE cellIdx | WAIT <message>
         //print('WAIT');
