@@ -4,7 +4,8 @@ var error = stderr.writeln, parse = int.parse;
 final int kM = 1 , kO = 0;
 final int kG = 0 , kC = 1, kS = 2, kW = 3;
 
-final List<int> kGROW = [0,1,3,7];
+final List<List<int>> kGROW = [ [ 0 , 0 ], [ 1 , 1 ] , [ 3 , 3 ] , [ 7 , 7 ] ];
+final List<int> kFUZZYBEAM = [ 1 , 3 , 7 , 11 ];
 
 //  Time
 Stopwatch stopwatch = new Stopwatch();
@@ -27,11 +28,28 @@ class NatureSpirit
 
     int mine = 0, opp = 0, dormant = 0;
 
-    List<List<int>> cost = [ [ 0 , 0 ], [ 1 , 1 ] , [ 3 , 3 ] , [ 7 , 7 ] ];
+    List<List<int>> cost = kGROW;
     List<List<int>> ownTree = [ [] , [] ];
 
     int complete = 0;
     List<int> nextSeed = [ -2 , -1 ];
+
+    int fuzzyBeam = 37 * kFUZZYBEAM[3];
+
+    NatureSpirit( );
+
+    NatureSpirit.fromNatureSpirit(NatureSpirit _) :
+    this.sun = List.generate( 2 , (i) => _.sun[i] , growable : false ) ,
+    this.score = List.generate( 2 , (i) => _.score[i] , growable : false ) ,
+    this.wait = List.generate( 2 , (i) => _.wait[i] , growable : false ) ,
+    this.scoring = [ 0 , 0 ],
+    this.tree = List.generate( 4 , (i) => _.tree[i] , growable : false ) ,
+    this.shadows = List.generate( 3 , (i) => _.shadows[i] , growable : false ) ,
+    this.mine = _.mine , this.opp = _.opp , this.dormant = _.dormant ,
+    this.cost = List.generate( 4 ,
+    (i) => List.generate( 2 , (j) => _.cost[i][j] , growable: false ) , growable:  false) ,
+    this.ownTree = List.generate( 2 ,
+    (i) => List.generate( _.ownTree[i].length , (j) => _.ownTree[i][j] ) , growable: false);
 
     List<List<int>> predict(int o)
     {
@@ -39,6 +57,9 @@ class NatureSpirit
         int friendly = ~0;
         for( final int t in ownTree[o] )
         {
+            if( (1 << t) & this.dormant != 0 )
+                continue;
+
             for( int s = 0 ; s < 3 ; s++ )
             {
                 if( this.tree[s] & (1 << t) != 0 && this.cost[o][s+1] <= this.sun[o]  )
@@ -58,6 +79,9 @@ class NatureSpirit
         for( final int t in ownTree[o] )
         {
             int seedling = 0;
+            if( (1 << t) & this.dormant != 0 )
+                continue;
+
             if( this.tree[2] & (1 << t) != 0 && this.cost[o][0] <= this.sun[o] )
             {
                 seedling = friendly & mapFields[t].seedling[2 - 2];
@@ -105,12 +129,15 @@ class NatureSpirit
         {
             for( int o = 0 ; o < 2 ; o++ )
             {
+                if( this.nextSeed[o] < 0 )  continue;
                 this.sun[o] = this.sun[kO] - this.cost[0][o];
                 this.cost[0][o]++;
                 this.dormant = (1 << this.nextSeed[o]) | this.dormant;
                 this.tree[0] = (1 << this.nextSeed[o]) | this.tree[0];
                 this.ownTree[o].add( this.nextSeed[o] );
                 this.opp = (1 << this.nextSeed[o]) | this.opp;
+                //  Update beam
+                this.fuzzyBeam = o == kM ? this.fuzzyBeam - kFUZZYBEAM[o] : this.fuzzyBeam + kFUZZYBEAM[o];
             }
         }
         ;
@@ -119,12 +146,15 @@ class NatureSpirit
 
     void reset()
     {
-        this.tree.forEach( (i) => 0 );
+        this.tree = [ 0 , 0 , 0 , 0 ];
         this.mine = 0;
         this.opp = 0;
         this.dormant = 0;
-        this.cost.forEach( (i) => [ kGROW[ i[0] ] , kGROW[ i[0] ] ] );
+        this.cost = kGROW;
         this.ownTree = [ [] , [] ];
+
+        //  Beam update
+        this.fuzzyBeam = 37 * kFUZZYBEAM[3] + this.score[kO] - this.score[kM];
     }
 
     void updateSun( List<String> i )
@@ -151,7 +181,10 @@ class NatureSpirit
         if( o == kM )
             this.mine = (1 << id) | this.mine;
         else
-            this.mine = (1 << id) | this.mine;
+            this.opp = (1 << id) | this.opp;
+
+        //  Beam update
+        this.fuzzyBeam = o == kM ? this.fuzzyBeam - kFUZZYBEAM[s] : this.fuzzyBeam + kFUZZYBEAM[s];
     }
 
     void simuDay()
@@ -159,8 +192,7 @@ class NatureSpirit
         this.nutrients = this.nutrients - this.complete;
         this.complete = 0;
         this.day++;
-        //  Update shadows
-        //  ...
+        this.shadows = mapShadow[ this.day ];
         resolveSum();
         this.wait = [ 0 , 0 ];
         this.dormant = 0;
@@ -184,6 +216,9 @@ class NatureSpirit
                 this.tree[s+1] = (1 << t1) | this.tree[s+1];
                 this.tree[s] = ~(1 << t1) & this.tree[s];
                 this.dormant = (1 << t1) | this.dormant;
+
+                //  Update Beam
+                this.fuzzyBeam = own == kM ? this.fuzzyBeam - kFUZZYBEAM[s] : this.fuzzyBeam + kFUZZYBEAM[s];
                 break;
             }
         }
@@ -202,8 +237,12 @@ class NatureSpirit
             this.opp = ~(1 << t1) & this.opp;
 
         this.complete++;
-        this.score[own] = this.score[own] + this.nutrients + mapFields[t1].richness;
+        int scored = this.nutrients + mapFields[t1].richness;
+        this.score[own] = this.score[own] + scored;
         this.ownTree[own].removeWhere( (i) => i == t1 );
+
+        //  Update Beam
+        this.fuzzyBeam = own == kM ? this.fuzzyBeam - scored : this.fuzzyBeam + scored;
     }
 
     void seeds( int t1 , int t2 )
@@ -224,8 +263,8 @@ class Field
 
     Field( {required List<String> i} ) {
         this.index = parse(i[0]);
-        this.richness = (parse(i[0]) - 1) * 2;
-        i.add( i[0] );
+        this.richness = (parse(i[1]) - 1) * 2;
+        i.add( i[2] );
         this.neigh = List.generate( 7 , (j) => parse(i[j+2]) , growable : false );
         this.friend = ~(1 << this.index);
     }
@@ -270,10 +309,29 @@ class Field
 
 class Tree {
 
-    late NatureSpirit _;
+    late NatureSpirit game;
     List<List<NatureSpirit?>> child = [];
 
     String choosed() => 'WAIT';
+    int i1 = -1, i2 = -1, day = 0;
+
+    //  MCTS
+    List<int> mcts_w1 = [], mcts_w2 = [], mcts_n1 = [], mcts_n2 = [];
+
+    //  Beam
+    List<int> beam_sum1 = [] , beam_sum2 = [] , beam_n1 = [] , beam_n2 = [];
+
+    List<int> mine = [];
+    List<int> opp = [];
+
+    List<List<int>> minePredictAction = [ ];
+    List<List<int>> oppPredictAction = [ ];
+
+    Tree( {required NatureSpirit g } )
+    {
+        this.game = new NatureSpirit.fromNatureSpirit(g);
+    }
+
 }
 
 List<int> memoizationShadow(List<Field> fields , int day)
@@ -298,11 +356,11 @@ List<int> memoizationShadow(List<Field> fields , int day)
 void main()
 {
     //  Needs fields
-    mapFields = List.generate( 37 , (i) => new Field( i : [ '0' , '0' , '0' , '0' , '0' , '0' ] ) , growable : false );
+    mapFields = List.generate( 37 , (j) => new Field( i : ["0","0","0","0","0","0","0","0"] ) , growable : false );
     mapShadow = List.generate( 6 , (i) => [ 0 , 0 , 0 ], growable: false );
 
     NatureSpirit game = new NatureSpirit();
-    Tree node = new Tree();
+    Tree node = new Tree( g: game )..mine = []..opp = [];
     int n = 0;
 
     n = parse(read());
@@ -332,6 +390,7 @@ void main()
         n = parse(read());
         for (int i = 0; i < n ; i++)
             var _ = read().split(' ');
+
 
         //  Out
         print( node.choosed() );
