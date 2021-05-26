@@ -5,6 +5,7 @@ import 'dart:collection';
 var error = stderr.writeln, parse = int.parse;
 final int kM = 1 , kO = 0;
 final int kG = 0 , kC = 1, kS = 2, kW = 3;
+final List<String> kORDER = ["GROW","COMPLETE","SEED","WAIT"];
 final int kB = 3;
 final int kLIMIT_START = 800, kLIMIT_TURN = 80;
 
@@ -57,8 +58,12 @@ class NatureSpirit
 
     List<List<int>> predict(int o)
     {
+        error("predict $o");
         List<List<int>> action = [];
         int friendly = ~0;
+        friendly = friendly & ~this.mine;
+        friendly = friendly & ~this.opp;
+
         for( final int t in ownTree[o] )
         {
             if( (1 << t) & this.dormant != 0 )
@@ -66,7 +71,7 @@ class NatureSpirit
 
             for( int s = 0 ; s < 3 ; s++ )
             {
-                if( this.tree[s] & (1 << t) != 0 && this.cost[o][s+1] <= this.sun[o]  )
+                if( this.tree[s] & (1 << t) != 0 && this.cost[s+1][o] <= this.sun[o]  )
                 {
                     action.add( [ kG , o , t ] );
                     break;
@@ -86,11 +91,11 @@ class NatureSpirit
             if( (1 << t) & this.dormant != 0 )
                 continue;
 
-            if( this.tree[2] & (1 << t) != 0 && this.cost[o][0] <= this.sun[o] )
+            if( this.tree[2] & (1 << t) != 0 && this.cost[0][o] <= this.sun[o] )
             {
                 seedling = friendly & mapFields[t].seedling[2 - 2];
             }
-            else if( this.tree[3] & (1 << t) != 0 && this.cost[o][0] <= this.sun[o] )
+            else if( this.tree[3] & (1 << t) != 0 && this.cost[0][o] <= this.sun[o] )
             {
                 seedling = friendly & (mapFields[t].seedling[2 - 2] | mapFields[t].seedling[3 - 2]);
             }
@@ -270,7 +275,7 @@ class Field
         this.richness = (parse(i[1]) - 1) * 2;
         i.add( i[2] );
         this.neigh = List.generate( 7 , (j) => parse(i[j+2]) , growable : false );
-        this.friend = ~(1 << this.index);
+        this.friend = 0x1fffffffff & ~(1 << this.index);
     }
 
     void memoization(List<Field> fields) {
@@ -302,10 +307,12 @@ class Field
         for( int day = 0 ; day < 6 ; day++ )
         {
             Field _ = this;
-            for( int s = 0 , next = _.neigh[day] ; s < 3 ; s++ , next = _.neigh[day] )
+            int next = _.neigh[day];
+            for( int s = 0 ; s < 3 ; s++ )
             {
                 if( next == -1 )    break;
-                friend = ~(1 << next) & friend;
+                this.friend = ~(1 << next) & this.friend;
+                next = fields[next].neigh[day];
             }
         }
     }
@@ -409,7 +416,18 @@ void main()
 
         while( stopwatch.elapsedMilliseconds < rtTime )
         {
-            sleep( Duration( milliseconds : Random().nextInt(30) ) );
+            node.minePredictAction = game.predict( kM );
+            node.oppPredictAction = game.predict( kO );
+
+            error("MINE PREDICT ACTION");
+            for( final _ in node.minePredictAction )
+                error( "${kORDER[_[0]]} $_");
+            error("OPP PREDICT ACTION");
+            for( final _ in node.oppPredictAction )
+                error( "${kORDER[_[0]]} $_");
+
+            //sleep( Duration( milliseconds : Random().nextInt(20) ) );
+            break;
         }
 
         //  Out
