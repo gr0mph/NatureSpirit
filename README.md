@@ -30,3 +30,11 @@
 
 - [x] dart compile exe main2.dart
 - [x] ./main2.exe < map.txt
+
+**After challenge**
+**Refactoring and add Beam search tree**
+
+- [x] Refactoring done
+- [x] Add Beam search tree
+- [x] Add binary priority tree with dart
+- [x] Check on test and improve (Miaza Boss 146 pts vs Me 100 pts)
