@@ -10,7 +10,8 @@ final int kB = 3;
 final int kLIMIT_START = 500, kLIMIT_TURN = 50;
 
 //final List<List<int>> kGROW = [ [ 0 , 0 ], [ 1 , 1 ] , [ 3 , 3 ] , [ 7 , 7 ] ];
-final List<int> kFUZZYBEAM = [ 1 , 3 , 7 , 11 ];
+final List<int> kFUZZYBEAM = [ 00 , 10 , 30 , 70 , 40 ];
+final List<int> kCOST = [ 0 , 1 , 3 , 7 , 4 ];
 
 //  Time
 Stopwatch stopwatch = new Stopwatch();
@@ -28,25 +29,78 @@ String read() {
 List<Field>     mapFields = [];
 List<List<int>> mapShadow = [];
 
+class Sakura
+{
+    late int cellIndex, size, isMine;
+    int isDormant = 0;
+
+    Sakura( c , s , m ) : this.cellIndex = c, this.size = s, this.isMine = m;
+    Sakura.fromSakura( Sakura _ ) : this.cellIndex = _.cellIndex , this.size = _.size ,
+    this.isMine = _.isMine , this.isDormant = _.isDormant;
+
+    void seeds( NatureSpirit _ , List<int> i )
+    {
+        int isMine = i[1];
+        _.nextSeed[isMine] = i[3];
+        this.isDormant = 1;
+        _.fuzzyBeam[isMine] += - _.cost[isMine][0];
+    }
+    void grows( NatureSpirit _ , List<int> i )
+    {
+        int isMine = i[1];
+        _.sun[isMine] -= _.cost[isMine][this.size++]--;
+        this.isDormant = 1;
+        _.fuzzyBeam[isMine] +=  kFUZZYBEAM[this.size] - (_.cost[isMine][this.size]++ - kCOST[this.size]);
+    }
+    void completes( NatureSpirit _ , List<int> i )
+    {
+        int isMine = i[1];
+        _.sun[isMine] -= 4;
+        _.fuzzyBeam[isMine] += 40;
+
+        int i1 = _.map[ this.cellIndex ]!;
+
+        _.treeTop[isMine] = _.treeTop[isMine] + ( -2 * isMine + 1 );
+        _.boardTree[i1] = _.boardTree[ _.treeTop[isMine] ];
+        int replaceCellIndex = _.boardTree[ _.treeTop[isMine] ]?.cellIndex ?? -1;
+
+        _.map[ replaceCellIndex ] = i1;
+        _.map.remove( this.cellIndex );
+    }
+    void waits( NatureSpirit _ , List<int> i )
+    {
+        int isMine = i[1];
+        _.wait[isMine] = 1;
+    }
+    @override
+    String toString() => "${this.cellIndex},${this.size},${this.isMine},${this.isDormant}";
+}
+
 class NatureSpirit
 {
+    //  Optimization
+    Map<int,int> map = new SplayTreeMap<int,int>();
+
+    //  Factorization
+    List<int> treeTop = [ 0 , 0 ];
+    List<List<int>> cost = [ [] , [] ];
+
     //  Memcopy
     int day = 0, nutrients = 0;
-    //int mine = 0, opp = 0, dormant = 0;
-    List<int> sun = [ 0 , 0 ], score = [ 0 , 0 ], wait = [ 0 , 0 ], scoring = [ 0 , 0 ];
-    //List<int> tree = [ 0 , 0 , 0 , 0 ];
+    List<int> sun = [ 0 , 0 ], score = [ 0 , 0 ], wait = [ 0 , 0 ], fuzzyBeam = [ 0 , 0 ] , scoring = [ 0 , 0 ];
     List<int> shadows = [ 0 , 0 , 0 ];
 
     List<int> oppCost = [ 0 , 1 , 3 , 7 ];
     List<int> mineCost = [ 0 , 1 , 3 , 7 ];
-    List<int> boardTree = [ 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0, 0 , 0, 0 , 0 , 0 , 0, 0 , 0,
-     0 , 0 , 0 , 0, 0 , 0, 0 , 0 , 0 , 0, 0 , 0, 0 , 0 , 0 , 0, 0 , 0 , 0 ];
+    List<Sakura?> boardTree = [
+    null , null , null , null , null , null , null , null , null , null, null , null ,
+    null , null , null , null , null , null , null , null , null , null, null , null ,
+    null , null , null , null , null , null , null , null , null , null, null , null , null ];
 
     int oppTreeTop = 0;
     int mineTreeTop = 36;
 
     //  Variable for Beam
-    int fuzzyBeam = 37 * kFUZZYBEAM[3];
     //  Variable for Simulatioon
     int complete = 0;
     List<int> nextSeed = [ -2 , -1 ];
@@ -69,12 +123,15 @@ class NatureSpirit
                 i = this.mineTreeTop + 1;
                 out = "$out\n";
             }
-            out = "$out $i[${(this.boardTree[i]&0x3f)},${((this.boardTree[i]>>6)&0x3)},${((this.boardTree[i]>>8)&0x1)},${((this.boardTree[i]>>9)&0x1)}]";
+            out = "$out $i[${(this.boardTree[i])}]";
         }
         return out;
     }
 
-    NatureSpirit( ) ;
+    NatureSpirit( ) {
+        this.cost = [ this.oppCost , this.mineCost ];
+        this.treeTop = [ this.oppTreeTop , this.mineTreeTop ];
+    }
 
     NatureSpirit.fromNatureSpirit(NatureSpirit _) {
 
@@ -83,18 +140,18 @@ class NatureSpirit
         this.sun.setRange(0 , 2 , _.sun ) ;
         this.score.setRange( 0 , 2 , _.score ) ;
         this.wait.setRange( 0 , 2 , _.wait ) ;
-        //this.tree.setRange( 0 , 4 , _.tree ) ;
+        this.fuzzyBeam.setRange( 0 , 2 , _.fuzzyBeam);
         this.shadows.setRange( 0 , 3 , _.shadows ) ;
-        //this.mine = _.mine ;
-        //this.opp = _.opp ;
-        //this.dormant = _.dormant ;
         this.mineCost.setRange( 0 , 4 , _.mineCost ) ;
         this.oppCost.setRange( 0 , 4 , _.oppCost );
-        this.boardTree.setRange( 0 , 37 , _.boardTree );
         this.mineTreeTop = _.mineTreeTop;
         this.oppTreeTop = _.oppTreeTop;
-        this.fuzzyBeam = _.fuzzyBeam;
 
+        this.cost = [ this.oppCost , this.mineCost ];
+        this.treeTop = [ this.oppTreeTop , this.mineTreeTop ];
+        _.map.forEach( (int k, int v) {
+            this.map[k] = v ; this.boardTree[ v ] = new Sakura.fromSakura( _.boardTree[ v ]! ) ;
+        } );
     }
 
     List<List<int>> predict(int own)
