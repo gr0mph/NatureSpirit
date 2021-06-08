@@ -76,6 +76,75 @@ class Sakura
     String toString() => "${this.cellIndex},${this.size},${this.isMine},${this.isDormant}";
 }
 
+void updateAction( SplayTreeMap<int,List<int>> m , List<int> a , int k )
+{
+    //  WAIT and SEED has ZERO gain
+    while( m.containsKey( k ) ) k++;
+    m[k] = a;
+}
+
+List<SplayTreeMap<int,List<int>>> predict( NatureSpirit g )
+{
+    SplayTreeMap<int,List<int>> mpa = new SplayTreeMap<int,List<int>>();
+    SplayTreeMap<int,List<int>> opa = new SplayTreeMap<int,List<int>>();
+    List<SplayTreeMap<int,List<int>>> pAction = [ opa , mpa ];
+    List<int> friendly = [ 0x1fffffff , 0x1fffffff ];
+
+    //for( MapEntry e in g.map.entries )
+    //    int cellIndex = e.key , indexStack = e.value;
+
+    opa[ g.fuzzyBeam[kO] ] = [ kW , kO ];
+    mpa[ g.fuzzyBeam[kM] ] = [ kW , kM ];
+
+    for( int indexStack in g.map.values ) {
+        Sakura t = g.boardTree[indexStack]!;
+
+        friendly[ t.isMine ] &= mapFields[ t.cellIndex ].friend;
+        friendly[ 1 - t.isMine ] &= ~(1 << t.cellIndex);
+
+        if( g.wait[ t.isMine ] == 1 ) {
+            continue; }
+
+        if( t.isDormant == 1 ) {
+            continue; }
+
+        if( t.size < 3 )
+            if( g.cost[ t.isMine][t.size+1] <= g.sun[t.isMine] ) {
+                int K   = g.fuzzyBeam[ t.isMine ]
+                        + kFUZZYBEAM[ t.size + 1 ]
+                        - g.cost[t.isMine][t.size + 1]
+                        + kCOST[t.size + 1 ];
+                updateAction( pAction[ t.isMine ] , [kG , t.isMine , t.cellIndex ], K );}
+        else
+            if( 4 <= g.sun[t.isMine] ) {
+                int K   = g.fuzzyBeam[ t.isMine ] + 40;
+                updateAction( pAction[ t.isMine ] , [kC , t.isMine , t.cellIndex ], K );}}
+
+    for( int indexStack in g.map.values ) {
+        Sakura t = g.boardTree[indexStack]!;
+        late int seedling;
+
+        if( g.wait[ t.isMine ] == 1 )
+            continue;
+
+        if( t.size == 2 && g.cost[t.isMine][0] <= g.sun[t.isMine] )
+            seedling    = friendly[t.isMine]
+                        & mapFields[t.cellIndex].seedling[0]; else
+        if( t.size == 3 && g.cost[t.isMine][0] <= g.sun[t.isMine] )
+            seedling    = friendly[t.isMine]
+                        &( mapFields[t.cellIndex].seedling[0]
+                        | mapFields[t.cellIndex].seedling[1] );
+
+        for( int i = 0 ; i < 37 ; i++ ) {
+            if( seedling & 1 == 1 ) {
+                int K   = g.fuzzyBeam[ t.isMine ]
+                        - g.cost[ t.isMine ][0];
+                updateAction( pAction[ t.isMine ] , [kS , t.isMine , t.cellIndex , i ] , K ); }
+            seedling = seedling >> 1; } }
+
+    return pAction;
+}
+
 class NatureSpirit
 {
     //  Optimization
@@ -104,15 +173,6 @@ class NatureSpirit
     //  Variable for Simulatioon
     int complete = 0;
     List<int> nextSeed = [ -2 , -1 ];
-
-    int getCellIndex ( int tree ) => tree & 0x3f;
-    int getSize( int tree ) => (tree >> 6) & 0x3;
-    int getMine( int tree ) => (tree >> 8) & 0x1;
-    int getDormant( int tree ) => (tree >> 9) & 0x1;
-
-    int setSize( int tree , int s ) => (tree & 0x33f) | (s << 6);
-    int setMine( int tree , int o ) => (tree & 0x2ff) | (o << 8);
-    int setDormant( int tree , int d ) => (tree & 0x1ff) | (d << 9);
 
     @override
     String toString() {
@@ -154,88 +214,6 @@ class NatureSpirit
         } );
     }
 
-    List<List<int>> predict(int own)
-    {
-        List<List<int>> action = [];
-        int friendly = 0x1fffffffff;
-        //friendly = friendly & ~this.mine;
-        //friendly = friendly & ~this.opp;
-
-        if( this.wait[own] == 1 )
-        {
-            action.add( [ kW , own ] );
-            return action;
-        }
-
-        late List<int> lTree , cost;
-        if( own == kO )
-        {
-            cost = this.oppCost;
-            lTree = [for (int i = 0; i < this.oppTreeTop ;i++ ) this.boardTree[i] ];
-        }
-        else
-        {
-            cost = this.mineCost;
-            lTree = [for (int i = 36; i > this.mineTreeTop ;i-- ) this.boardTree[i] ];
-        }
-
-        for( int i = 0 ; i < 37 ; i++ )
-        {
-            if( i == this.oppTreeTop )  i = this.mineTreeTop + 1;
-
-            int t = getCellIndex( this.boardTree[i] );
-            int s = getSize( this.boardTree[i] );
-            int o = getMine( this.boardTree[i] );
-
-            if( own == o )
-            {
-                if( getDormant( this.boardTree[i] ) != 0 )  continue;
-
-                if( s < 3 )
-                    if( cost[s+1] <= this.sun[own] )        action.add( [ kG , own , t ] );
-                else
-                    if( cost[3] <= this.sun[own] )          action.add( [ kC , own , t ] );
-            }
-            else
-            {
-                friendly = friendly & ~(1 << t);
-            }
-        }
-
-        for( final int tree in lTree )
-        {
-            int t = getCellIndex(tree);
-            int s = getSize(tree);
-            int seedling = 0;
-
-            if( getDormant(tree) != 0 )
-                continue;
-
-            if( s == 2 && cost[0] <= this.sun[own] )
-                seedling = friendly & mapFields[t].seedling[2 - 2];
-            if( s == 3 && cost[0] <= this.sun[own] )
-                seedling = friendly & (mapFields[t].seedling[2 - 2] | mapFields[t].seedling[3 - 2]);
-
-            //if( this.tree[2] & (1 << t) != 0 && cost[0] <= this.sun[o] )
-            //{
-            //    seedling = friendly & mapFields[t].seedling[2 - 2];
-            //}
-            //else if( this.tree[3] & (1 << t) != 0 && cost[0] <= this.sun[o] )
-            //{
-            //    seedling = friendly & (mapFields[t].seedling[2 - 2] | mapFields[t].seedling[3 - 2]);
-            //}
-            for( int i = 0 ; i < 37 ; i++ )
-            {
-                if( seedling & 1 != 0 ) {
-                    action.add( [ kS , own , t , i ] );
-                }
-                seedling = seedling >> 1;
-            }
-        }
-        action.add( [ kW , own ] );
-        return action;
-    }
-
     void predictSum( List<int> r , List<int> shadow , int d , List<int> week )
     {
         //int shadows = (shadow[ 1-1 ] | shadow[ 2 - 1 ] | shadow[ 3 - 1 ] );
@@ -245,21 +223,6 @@ class NatureSpirit
             ( shadow[ 2 - 1 ] | shadow[ 3 - 1 ] ),
             ( shadow[ 3 - 1 ] ),
         ];
-        //for( int s = 1 ; s < 4 ; s++ )
-        //{
-        //    List<int> compute =
-        //    [ this.tree[s] & this.opp & ~shadows , this.tree[s] & this.mine & ~shadows ];
-        //    for( int i = 0 ; i < 37 ; i++ )
-        //    {
-        //        r[kO] = r[kO] + ( (compute[kO] & 1) * s ) * week[d];
-        //        compute[kO] = compute[kO] >> 1;
-        //
-        //        r[kM] = r[kM] + ( (compute[kM] & 1) * s ) * week[d];
-        //        compute[kM] = compute[kM] >> 1;
-        //    }
-        //    shadows = shadows & ~(shadow[s-1]);
-        //}
-
         for( int i = 0 ; i < 37 ; i++ ) {
 
             if( i == this.oppTreeTop )  i = this.mineTreeTop + 1;
@@ -607,8 +570,9 @@ class Tree {
     List<int> mine = [];
     List<int> opp = [];
 
-    List<List<int>> minePredictAction = [ ];
-    List<List<int>> oppPredictAction = [ ];
+    //  Best three action determined by predict 3 x 3
+    SplayTreeMap<int,List<int>> minePredictAction = new SplayTreeMap<int,List<int>>();
+    SplayTreeMap<int,List<int>> oppPredictAction = new SplayTreeMap<int,List<int>>();
 
     @override
     String toString() {
