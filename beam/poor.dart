@@ -34,7 +34,7 @@ class Sakura
     late int cellIndex, size, isMine;
     int isDormant = 0;
 
-    Sakura( c , s , m, {int c, int m} ) : this.cellIndex = c, this.size = s, this.isMine = m;
+    Sakura( int c , int s , int m, {int c} ) : this.cellIndex = c, this.size = s, this.isMine = m;
     Sakura.fromSakura( Sakura _ ) : this.cellIndex = _.cellIndex , this.size = _.size ,
     this.isMine = _.isMine , this.isDormant = _.isDormant;
 
@@ -257,19 +257,15 @@ class NatureSpirit
 
     void reset()
     {
-        ///this.tree = [ 0 , 0 , 0 , 0 ];
-        //this.mine = 0;
-        //this.opp = 0;
-        //this.dormant = 0;
+        this.map = new SplayTreeMap<int,int>();
         this.mineCost = [ 0 , 1 , 3 , 7 ];
         this.oppCost = [ 0 , 1 , 3 , 7 ];
-        this.boardTree = [ 0 , 0 , 0 , 0 , 0 , 0, 0 , 0 , 0 , 0 , 0 , 0, 0 , 0 , 0 , 0 , 0 , 0,
-        0 , 0 , 0 , 0 , 0 , 0, 0 , 0 , 0 , 0 , 0 , 0, 0 , 0 , 0 , 0 , 0 , 0, 0 ];
+        this.boardTree = [
+        null , null , null , null , null , null , null , null , null , null, null , null ,
+        null , null , null , null , null , null , null , null , null , null, null , null ,
+        null , null , null , null , null , null , null , null , null , null, null , null , null ];        this.oppTreeTop = 0;
         this.oppTreeTop = 0;
         this.mineTreeTop = 36;
-
-        //  Beam update
-        this.fuzzyBeam = 37 * kFUZZYBEAM[3] - this.score[kO] - this.score[kM];
     }
 
     void updateSun( List<String> i )
@@ -288,30 +284,13 @@ class NatureSpirit
 
     void updateTree( List<String> i )
     {
-        int tree = parse(i[0]), s = parse(i[1]) , o = parse(i[2]) , d = parse(i[3]);
-        //this.tree[s] = (1 << id) | this.tree[s];
-        //this.dormant = (d << id) | this.dormant;
-        tree = setSize( tree , s );
-        tree = setMine( tree , o );
-        tree = setDormant( tree , d );
+        Sakura t = new Sakura( parse(i[0]) , parse(i[1]) , parse(i[2]) )..isDormant = parse(i[3]);
 
-        if( o == kM )
-        {
-            this.mineCost[s]++;
-            this.boardTree[ this.mineTreeTop ] = tree; //id;
-            this.mineTreeTop--;
-            //this.mine = (1 << id) | this.mine;
-        }
-        else
-        {
-            this.oppCost[s]++;
-            this.boardTree[ this.oppTreeTop ] = tree; //id;
-            this.oppTreeTop++;
-            //this.opp = (1 << id) | this.opp;
-        }
-
-        //  Beam update
-        this.fuzzyBeam = this.fuzzyBeam - kFUZZYBEAM[s] ;
+        this.cost[ t.isMine ][ t.size ]++;
+        int indexStack = this.treeTop[ t.isMine ];
+        this.boardTree[ indexStack ] = t;
+        this.map[ t.cellIndex ] = indexStack;
+        this.treeTop[ t.isMine ] += - 2 * t.isMine + 1;
     }
 
     void simuDay()
@@ -323,12 +302,10 @@ class NatureSpirit
         this.shadows = mapShadow[ d ];
         this.predictSum( this.sun , this.shadows , d , [ 1 , 1 , 1 , 1 , 1 , 1 ] );
         this.wait = [ 0 , 0 ];
-        //this.dormant = 0;
-        for( int i = 0 ; i < 37 ; i++ )
-        {
-            if( i == this.oppTreeTop )  i = this.mineTreeTop + 1;
-            this.boardTree[i] = setDormant( this.boardTree[i] , 0 );
-        }
+
+        for( int indexStack in this.map.values ) {
+            this.boardTree[indexStack]!.isDormant = 0; }
+
     }
 
     bool simuTurn( List<int> mine , List<int> opp )
@@ -339,123 +316,6 @@ class NatureSpirit
         resolveSeed();
         return this.wait[kO] == 1 && this.wait[kM] == 1 ? true : false ;
     }
-
-    void grows( List<int> i )
-    {
-        int own = i[1], t1 = i[2];
-
-        if( own == kO )
-        {
-            int i = this.boardTree.lastIndexWhere( (e) => getCellIndex(e) == t1 );
-            int s = getSize( this.boardTree[i] );
-
-            this.sun[own] = this.sun[own] - this.oppCost[s+1];
-            this.oppCost[s+1]++;
-            this.oppCost[s]--;
-            this.boardTree[i] = setSize( this.boardTree[i] , s + 1 );
-            this.boardTree[i] = setDormant( this.boardTree[i] , 1 );
-
-            //  Update Beam
-            this.fuzzyBeam = this.fuzzyBeam - kFUZZYBEAM[s];
-        }
-        else
-        {
-            int i = this.boardTree.lastIndexWhere( (e) => getCellIndex(e) == t1 );
-            int s = getSize( this.boardTree[i] );
-
-            this.sun[own] = this.sun[own] - this.mineCost[s+1];
-            this.mineCost[s+1]++;
-            this.mineCost[s]--;
-            this.boardTree[i] = setSize( this.boardTree[i] , s + 1 );
-            this.boardTree[i] = setDormant( this.boardTree[i] , 1 );
-
-            //  Update Beam
-            this.fuzzyBeam = this.fuzzyBeam - kFUZZYBEAM[s];
-        }
-
-
-        //for( int s = 0 ; s < 3 ; s++ )
-        //{
-        //    if( this.tree[s] & (1 << t1) != 0 )
-        //    {
-        //        if( own == kO )
-        //        {
-        //            this.sun[own] = this.sun[own] - this.oppCost[s+1];
-        //            this.oppCost[s+1]++;
-        //            this.oppCost[s]--;
-        //        }
-        //        else
-        //        {
-        //            this.sun[own] = this.sun[own] - this.mineCost[s+1];
-        //            this.mineCost[s+1]++;
-        //            this.mineCost[s]--;
-        //        }
-        //        this.tree[s+1] = (1 << t1) | this.tree[s+1];
-        //        this.tree[s] = ~(1 << t1) & this.tree[s];
-        //        this.dormant = (1 << t1) | this.dormant;
-
-        //        //  Update Beam
-        //        this.fuzzyBeam = this.fuzzyBeam - kFUZZYBEAM[s];
-        //        break;
-        //    }
-        //}
-    }
-
-    void completes( List<int> i )
-    {
-        int own = i[1], t1 = i[2];
-        this.sun[own] = this.sun[own] - 4;
-        //this.tree[3] = ~(1 << t1) & this.tree[3];
-
-        if( own == kO )
-        {
-            this.oppCost[3]--;
-            this.oppTreeTop--;
-            for( int i1 = 0 ; i1 < this.oppTreeTop ; i1++ )
-                if( this.boardTree[i1] == t1 )
-                {
-                    this.boardTree[ i1 ] = this.boardTree[ this.oppTreeTop ];
-                    break;
-                }
-            //this.opp = ~(1 << t1) & this.opp;
-        }
-        else
-        {
-            this.mineCost[3]--;
-            this.mineTreeTop++;
-            for( int i1 = 36 ; i1 > this.mineTreeTop ; i1-- )
-                if( this.boardTree[i1] == t1 )
-                {
-                    this.boardTree[ i1 ] = this.boardTree[ this.mineTreeTop ];
-                    break;
-                }
-            //this.mine = ~(1 << t1) & this.mine;
-        }
-
-        this.complete++;
-        int scored = this.nutrients + mapFields[t1].richness;
-        this.score[own] = this.score[own] + scored;
-
-        //  Update Beam
-        this.fuzzyBeam = this.fuzzyBeam - mapFields[t1].richness;
-    }
-
-    void seeds( List<int> i )
-    {
-        int own = i[1], t1 = i[2] , t2 = i[3];
-        this.nextSeed[own] = t2;
-
-        int _ = this.boardTree.lastIndexWhere( (e) => getCellIndex(e) == t1 );
-
-        this.boardTree[_] = setDormant( this.boardTree[_]  , 1 );
-    }
-
-    void waits( List<int> i )
-    {
-        int own = i[1];
-        this.wait[own] = 1;
-    }
-
 }
 
 class Field
