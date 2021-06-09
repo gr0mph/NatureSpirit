@@ -34,7 +34,7 @@ class Sakura
     late int cellIndex, size, isMine;
     int isDormant = 0;
 
-    Sakura( c , s , m ) : this.cellIndex = c, this.size = s, this.isMine = m;
+    Sakura( c , s , m, {int c, int m} ) : this.cellIndex = c, this.size = s, this.isMine = m;
     Sakura.fromSakura( Sakura _ ) : this.cellIndex = _.cellIndex , this.size = _.size ,
     this.isMine = _.isMine , this.isDormant = _.isDormant;
 
@@ -223,23 +223,17 @@ class NatureSpirit
             ( shadow[ 2 - 1 ] | shadow[ 3 - 1 ] ),
             ( shadow[ 3 - 1 ] ),
         ];
-        for( int i = 0 ; i < 37 ; i++ ) {
 
-            if( i == this.oppTreeTop )  i = this.mineTreeTop + 1;
+        for( int indexStack in this.map.values )
+        {
+            Sakura t = this.boardTree[indexStack]!;
 
-            int t = getCellIndex( this.boardTree[i] );
-            int s = getSize( this.boardTree[i] );
-            int o = getMine( this.boardTree[i] );
-
-            if( s == 0 )                continue;
-
-            int compute = (1 << t) & ~( shadows[ s - 1 ] ) ;
+            if( t.size == 0 )
+                continue;
+            int compute = (1 << t.cellIndex) & ~( shadows[ t.size - 1] );
             if( compute != 0 )
-            {
-                r[o] = r[o] + s * week[d];
-            }
+                r[t.isMine] = r[t.isMine] + t.size * week[d];
         }
-
     }
 
     void resolveSeed()
@@ -247,40 +241,17 @@ class NatureSpirit
         if( this.nextSeed[kO] == this.nextSeed[kM] )
             ;
         else
-        {
-            for( int o = 0 ; o < 2 ; o++ )
-            {
+            for( int o = 0 ; o < 2 ; o++ ) {
                 if( this.nextSeed[o] < 0 )  continue;
 
-                int nextTree = this.nextSeed[o];
-                nextTree = setSize( nextTree , 0 );
-                nextTree = setDormant( nextTree , 1 );
-                nextTree = setMine( nextTree , o );
+                int cellIndex = this.nextSeed[ o ], indexStack = this.treeTop[ o ];
+                Sakura t = new Sakura( cellIndex , 0, o );
 
-                //this.dormant = (1 << this.nextSeed[o]) | this.dormant;
-                //this.tree[0] = (1 << this.nextSeed[o]) | this.tree[0];
+                this.sun[o] -= this.cost[o][0]++;
+                this.boardTree[ indexStack ] = t;
+                this.map[cellIndex] = indexStack;
+                this.treeTop[o] = this.treeTop[o] - 2 * o + 1; }
 
-                if( o == kO )
-                {
-                    this.sun[o] = this.sun[o] - this.oppCost[0];
-                    this.oppCost[0]++;
-                    this.boardTree[ this.oppTreeTop ] = nextTree;   //this.nextSeed[o];
-                    this.oppTreeTop++;
-                }
-                else
-                {
-                    this.sun[o] = this.sun[o] - this.mineCost[0];
-                    this.mineCost[0]++;
-                    this.boardTree[ this.mineTreeTop ] = nextTree; // this.nextSeed[o];
-                    this.mineTreeTop--;
-                }
-
-                //this.opp = (1 << this.nextSeed[o]) | this.opp;
-                //  Update beam
-                this.fuzzyBeam = this.fuzzyBeam - kFUZZYBEAM[o];
-            }
-        }
-        ;
         this.nextSeed = [-2 , -1 ];
     }
 
