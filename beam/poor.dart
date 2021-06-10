@@ -313,7 +313,7 @@ class NatureSpirit
 
     }
 
-    bool simuTurn( NatureSpirit _ , List<int> mine , List<int> opp )
+    bool simuTurn( List<int> mine , List<int> opp )
     {
         this.boardTree[ this.map[ mine[2] ]! ]!.turns( this , mine );
         this.boardTree[ this.map[ opp[2] ]! ]!.turns( this , opp );
@@ -381,7 +381,7 @@ class Tree {
 
     Tree? parent = null;
     late NatureSpirit game;
-    List<List<Tree>> child = [];
+    List<List<Tree>> child = [ [] , [] , [] ];
 
     String chosen( List<int> i ) {
         final List<Function> kFUN = [printg, printc , prints , printw ];
@@ -491,47 +491,49 @@ List<int> memoizationShadow(List<Field> fields , int day)
 void resolveNode( int end , Tree g , SplayTreeMap bst , SplayTreeMap brt )
 {
     late Tree node = g ,child;
+    List _ = predict( node.game );
+    node.minePredictAction = _[kM];
+    node.oppPredictAction = _[kO];
 
-    node.minePredictAction = node.game.predict( kM );
-    node.oppPredictAction = node.game.predict( kO );
-
-    node.child = List.generate( node.minePredictAction.length , (i) => [] , growable : false );
     int m1 = 0;
-    for( final List<int> mine in node.minePredictAction )
-    {
-        int o1 = 0;
+    for( int m1 = 0 ; m1 < 3 ; m1++ ) {
+        if( node.minePredictAction.length == 0 )
+            break;
+
+        int key = node.minePredictAction.firstKey()!;
+        List<int> mine = node.minePredictAction[key]!;
+        node.minePredictAction.remove( key );
 
         node.child[m1] = List.generate( node.oppPredictAction.length ,
         (i) => new Tree( g : node.game )..i1 = m1..mine = mine..parent = node , growable : false );
 
-        for( final List<int> opp in node.oppPredictAction )
-        {
+        for( int o1 = 0 ; o1 < 3 ; o1++ ) {
+            if( node.oppPredictAction.length == 0 )
+                break;
+
+            int key = node.oppPredictAction.firstKey()!;
+            List<int> opp = node.oppPredictAction[key]!;
+            node.oppPredictAction.remove( key );
+
+            node.child[m1].add(
+                new Tree( g : node.game)..i1 = m1..i2 = o1..mine = mine..opp = opp..parent = node
+            );
+
             child = node.child[m1][o1];
 
-            child.i2 = o1;
-            child.opp = opp;
+            if( child.game.simuTurn( child.mine , child.opp ) == true ) {
+                child.game.simuDay(); }
 
-            if( child.game.simuTurn( child.mine , child.opp ) == true )
-            {
-                child.game.simuDay();
-            }
-
-            if( child.game.day == end )
-            {
-                child.updateScoring( brt );
-            }
-            else
-            {
-                child.updateHeap( bst );
-            }
+            if( child.game.day == end ) {
+                child.updateScoring( brt ); }
+            else {
+                child.updateHeap( bst ); }
 
             //error("SIMU TURN ${kORDER[child.mine[0]]} ${child.mine} ${kORDER[child.opp[0]]} ${child.opp} ${child.game.fuzzyBeam}");
             if( stopwatch.elapsedMilliseconds >= rtTime )   break;
-            o1++;
             nbChild++;
         }
         if( stopwatch.elapsedMilliseconds >= rtTime )   break;
-        m1++;
     }
     //error("RESOLVE [ ${bst.length} , ${brt.length} ] ");
 
