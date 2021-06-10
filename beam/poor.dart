@@ -67,14 +67,10 @@ class Sakura
         _.map[ replaceCellIndex ] = i1;
         _.map.remove( this.cellIndex );
     }
-    void waits( NatureSpirit _ , List<int> i )
-    {
-        int isMine = i[1];
-        _.wait[isMine] = 1;
-    }
+
     void turns( NatureSpirit _ , List<int> i )
     {
-        final List<Function> kFUN = [grows, completes, seeds, waits];
+        final List<Function> kFUN = [grows, completes, seeds ];
         kFUN[ i[0] ]( _ , i );
     }
     @override
@@ -100,6 +96,9 @@ List<SplayTreeMap<int,List<int>>> predict( NatureSpirit g )
 
     opa[ g.fuzzyBeam[kO] ] = [ kW , kO ];
     mpa[ g.fuzzyBeam[kM] ] = [ kW , kM ];
+
+    error("PREDICT ${g.map}");
+    error(">>> ${g.boardTree}");
 
     for( int indexStack in g.map.values ) {
         Sakura t = g.boardTree[indexStack]!;
@@ -130,6 +129,9 @@ List<SplayTreeMap<int,List<int>>> predict( NatureSpirit g )
         late int seedling;
 
         if( g.wait[ t.isMine ] == 1 )
+            continue;
+
+        if( t.size <= 1)
             continue;
 
         if( t.size == 2 && g.cost[t.isMine][0] <= g.sun[t.isMine] )
@@ -315,8 +317,16 @@ class NatureSpirit
 
     bool simuTurn( List<int> mine , List<int> opp )
     {
-        this.boardTree[ this.map[ mine[2] ]! ]!.turns( this , mine );
-        this.boardTree[ this.map[ opp[2] ]! ]!.turns( this , opp );
+        if( mine[0] == kW )
+            this.wait[ mine[1] ] = 1;
+        else
+            this.boardTree[ this.map[ mine[2] ]! ]!.turns( this , mine );
+
+        if( opp[0] == kW )
+            this.wait[ opp[1] ] = 1;
+        else
+            this.boardTree[ this.map[ opp[2] ]! ]!.turns( this , opp );
+
         this.resolveSeed();
         return this.wait[kO] == 1 && this.wait[kM] == 1 ? true : false ;
     }
@@ -381,7 +391,8 @@ class Tree {
 
     Tree? parent = null;
     late NatureSpirit game;
-    List<List<Tree>> child = [ [] , [] , [] ];
+    List<List<Tree?>> child = [
+        [ null , null , null ] , [ null , null , null ] , [ null , null , null ] ];
 
     String chosen( List<int> i ) {
         final List<Function> kFUN = [printg, printc , prints , printw ];
@@ -490,12 +501,11 @@ List<int> memoizationShadow(List<Field> fields , int day)
 
 void resolveNode( int end , Tree g , SplayTreeMap bst , SplayTreeMap brt )
 {
-    late Tree node = g ,child;
+    late Tree node = g , child;
     List _ = predict( node.game );
     node.minePredictAction = _[kM];
     node.oppPredictAction = _[kO];
 
-    int m1 = 0;
     for( int m1 = 0 ; m1 < 3 ; m1++ ) {
         if( node.minePredictAction.length == 0 )
             break;
@@ -515,11 +525,8 @@ void resolveNode( int end , Tree g , SplayTreeMap bst , SplayTreeMap brt )
             List<int> opp = node.oppPredictAction[key]!;
             node.oppPredictAction.remove( key );
 
-            node.child[m1].add(
-                new Tree( g : node.game)..i1 = m1..i2 = o1..mine = mine..opp = opp..parent = node
-            );
-
-            child = node.child[m1][o1];
+            child =
+            new Tree( g : node.game)..i1 = m1..i2 = o1..mine = mine..opp = opp..parent = node ;
 
             if( child.game.simuTurn( child.mine , child.opp ) == true ) {
                 child.game.simuDay(); }
@@ -529,12 +536,15 @@ void resolveNode( int end , Tree g , SplayTreeMap bst , SplayTreeMap brt )
             else {
                 child.updateHeap( bst ); }
 
+            node.child[m1][o1] = child;
+
             //error("SIMU TURN ${kORDER[child.mine[0]]} ${child.mine} ${kORDER[child.opp[0]]} ${child.opp} ${child.game.fuzzyBeam}");
-            if( stopwatch.elapsedMilliseconds >= rtTime )   break;
-            nbChild++;
-        }
-        if( stopwatch.elapsedMilliseconds >= rtTime )   break;
-    }
+            if( stopwatch.elapsedMilliseconds >= rtTime )
+                break;
+            nbChild++; }
+
+        if( stopwatch.elapsedMilliseconds >= rtTime )
+            break; }
     //error("RESOLVE [ ${bst.length} , ${brt.length} ] ");
 
 }
@@ -548,7 +558,7 @@ void main()
     SplayTreeMap beamSearchTree = new SplayTreeMap<int,Tree>();
     SplayTreeMap beamBestResult = new SplayTreeMap<int,Tree>();
     NatureSpirit game = new NatureSpirit();
-    Tree node = new Tree( g: game )..mine = []..opp = []..game = game;
+    Tree node = new Tree( g: game );
     int n = 0;
 
     n = parse(read());
@@ -582,51 +592,34 @@ void main()
 
         stopwatch.reset();
         error(turn++);
+        node = new Tree( g: game );
 
         beamSearchTree = new SplayTreeMap<int,Tree>();
         beamBestResult = new SplayTreeMap<int,Tree>();
-        beamSearchTree[ game.fuzzyBeam ] = node ;
-
-        //  Update Node
-        node.reset();
+        node.updateHeap( beamSearchTree );
 
         int end = min(game.day + 3,24);
 
-        node.minePredictAction = node.game.predict( kM );
-        node.oppPredictAction = node.game.predict( kO );
-
-        error(node.game);
-        for( List<int> a in node.minePredictAction )
-            error( a );
-
-        //for( List<int> a in node.oppPredictAction )
-        //    error( a );
-
         Queue<Tree> beam = new Queue<Tree>();
-        while( stopwatch.elapsedMilliseconds < rtTime )
-        {
+        while( stopwatch.elapsedMilliseconds < rtTime ) {
             //break;
-
             rtStart = stopwatch.elapsedMilliseconds;
 
             late Tree current;
-            if( beamSearchTree.length == 0 )    break;
+            if( beamSearchTree.length == 0 )
+                break;
 
-            for( int i = 0 ; i < min( 3, beamSearchTree.length ) ; i++ )
-            {
+            for( int i = 0 ; i < min( 3, beamSearchTree.length ) ; i++ ) {
                 int key = beamSearchTree.firstKey();
                 beam.add( beamSearchTree[key] );
-                beamSearchTree.remove( key );
-            }
+                beamSearchTree.remove( key ); }
 
-            for( int i = 0 ; i < beam.length ; i++ )
-            {
-                if( stopwatch.elapsedMilliseconds >= rtTime )   break;
+            for( int i = 0 ; i < beam.length ; i++ ) {
+                if( stopwatch.elapsedMilliseconds >= rtTime )
+                    break;
                 current = beam.removeFirst();
-                resolveNode( end , current , beamSearchTree , beamBestResult );
-            }
+                resolveNode( end , current , beamSearchTree , beamBestResult ); } }
 
-        }
         rtEnd = stopwatch.elapsedMilliseconds;
 
         late int key;
