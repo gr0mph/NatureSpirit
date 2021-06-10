@@ -34,7 +34,7 @@ class Sakura
     late int cellIndex, size, isMine;
     int isDormant = 0;
 
-    Sakura( int c , int s , int m, {int c} ) : this.cellIndex = c, this.size = s, this.isMine = m;
+    Sakura( int c , int s , int m ) : this.cellIndex = c, this.size = s, this.isMine = m;
     Sakura.fromSakura( Sakura _ ) : this.cellIndex = _.cellIndex , this.size = _.size ,
     this.isMine = _.isMine , this.isDormant = _.isDormant;
 
@@ -71,6 +71,11 @@ class Sakura
     {
         int isMine = i[1];
         _.wait[isMine] = 1;
+    }
+    void turns( NatureSpirit _ , List<int> i )
+    {
+        final List<Function> kFUN = [grows, completes, seeds, waits];
+        kFUN[ i[0] ]( _ , i );
     }
     @override
     String toString() => "${this.cellIndex},${this.size},${this.isMine},${this.isDormant}";
@@ -308,12 +313,11 @@ class NatureSpirit
 
     }
 
-    bool simuTurn( List<int> mine , List<int> opp )
+    bool simuTurn( NatureSpirit _ , List<int> mine , List<int> opp )
     {
-        final List<Function> kFUN = [grows, completes, seeds, waits];
-        kFUN[ mine[0] ]( mine );
-        kFUN[ opp[0] ]( opp );
-        resolveSeed();
+        this.boardTree[ this.map[ mine[2] ]! ]!.turns( this , mine );
+        this.boardTree[ this.map[ opp[2] ]! ]!.turns( this , opp );
+        this.resolveSeed();
         return this.wait[kO] == 1 && this.wait[kM] == 1 ? true : false ;
     }
 }
@@ -416,19 +420,9 @@ class Tree {
 
     }
 
-    void reset()
-    {
-        this.minePredictAction = [];
-        this..oppPredictAction = [];
-        this.child = [];
-        this.parent = null;
-        this.mine = [];
-        this.opp = [];
-    }
-
     void updateHeap( SplayTreeMap t )
     {
-        int b = 10 * this.game.fuzzyBeam;
+        int b = 10 * (this.game.fuzzyBeam[kO] - this.game.fuzzyBeam[kM]);
         while( t.containsKey(b) )   b--;
         t[b] = this;
     }
