@@ -74,7 +74,7 @@ class Sakura
         kFUN[ i[0] ]( _ , i );
     }
     @override
-    String toString() => "${this.cellIndex},${this.size},${this.isMine},${this.isDormant}";
+    String toString() => "(${this.cellIndex},${this.size},${this.isMine},${this.isDormant})";
 }
 
 void updateAction( SplayTreeMap<int,List<int>> m , List<int> a , int k )
@@ -97,8 +97,8 @@ List<SplayTreeMap<int,List<int>>> predict( NatureSpirit g )
     opa[ g.fuzzyBeam[kO] ] = [ kW , kO ];
     mpa[ g.fuzzyBeam[kM] ] = [ kW , kM ];
 
-    error("PREDICT ${g.map}");
-    error(">>> ${g.boardTree}");
+    //error("PREDICT ${g.map}");
+    //error(">>> ${g.boardTree}");
 
     for( int indexStack in g.map.values ) {
         Sakura t = g.boardTree[indexStack]!;
@@ -154,7 +154,7 @@ List<SplayTreeMap<int,List<int>>> predict( NatureSpirit g )
 
 class NatureSpirit
 {
-    //  Optimization
+    //  Optimization <cellIndex,indexStack>
     Map<int,int> map = new SplayTreeMap<int,int>();
 
     //  Factorization
@@ -173,8 +173,10 @@ class NatureSpirit
     null , null , null , null , null , null , null , null , null , null, null , null ,
     null , null , null , null , null , null , null , null , null , null, null , null , null ];
 
-    int oppTreeTop = 0;
-    int mineTreeTop = 36;
+    int get oppTreeTop  => treeTop[ kO ];
+    int get mineTreeTop => treeTop[ kM ];
+    void set oppTreeTop ( int d ) => treeTop[ kO ] = d;
+    void set mineTreeTop ( int d ) => treeTop[ kM ] = d;
 
     //  Variable for Beam
     //  Variable for Simulatioon
@@ -273,6 +275,7 @@ class NatureSpirit
         null , null , null , null , null , null , null , null , null , null, null , null , null ];        this.oppTreeTop = 0;
         this.oppTreeTop = 0;
         this.mineTreeTop = 36;
+        error("RESET $map $oppTreeTop $mineTreeTop $treeTop");
     }
 
     void updateSun( List<String> i )
@@ -298,6 +301,7 @@ class NatureSpirit
         this.boardTree[ indexStack ] = t;
         this.map[ t.cellIndex ] = indexStack;
         this.treeTop[ t.isMine ] += - 2 * t.isMine + 1;
+        error("UPDATE TREE $map $oppTreeTop $mineTreeTop");
     }
 
     void simuDay()
