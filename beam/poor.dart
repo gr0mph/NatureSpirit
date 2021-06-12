@@ -23,7 +23,6 @@ String read() {
 }
 
 List<Field>     mapFields = [];
-List<List<int>> mapShadow = [];
 
 class Sakura
 {
@@ -215,51 +214,42 @@ class NatureSpirit
         return out;
     }
 
-    NatureSpirit( ) {
-        //this.cost = [ this.oppCost , this.mineCost ];
-        this.agent = [ new Agent( d : 0 ) , new Agent( d : 0 ) ];
-        this.treeTop = [ this.oppTreeTop , this.mineTreeTop ];
-    }
+    NatureSpirit( ) : this.agent = [ new Agent( d : 0 ) , new Agent( d : 0 ) ];
 
     NatureSpirit.fromNatureSpirit(NatureSpirit _) {
 
         this.day = _.day;
         this.nutrients = _.nutrients;
         this.agent = [ new Agent.fromAgent( _.agent[0]) , new Agent.fromAgent( _.agent[0] ) ];
-        //this.fuzzyBeam.setRange( 0 , 2 , _.fuzzyBeam);
-        //for( int o = 0 ; o < 2 ; o++ )
-        //    this.cost[o].setRange( 0 , 4 , _.cost[o] );
         this.mineTreeTop = _.mineTreeTop;
         this.oppTreeTop = _.oppTreeTop;
 
-        //this.cost = [ this.oppCost , this.mineCost ];
-        this.treeTop = [ this.oppTreeTop , this.mineTreeTop ];
         _.map.forEach( (int k, int v) {
-            this.map[k] = v ; this.boardTree[ v ] = new Sakura.fromSakura( _.boardTree[ v ]! ) ;
-        } );
-    }
+            this.map[k] = v ;
+            this.boardTree[ v ] = new Sakura.fromSakura( _.boardTree[ v ]! ) ;
+        } ); }
 
-    void predictSum( List<int> r , List<int> shadow , int d , List<int> week )
-    {
-        //int shadows = (shadow[ 1-1 ] | shadow[ 2 - 1 ] | shadow[ 3 - 1 ] );
+    void predictSum( List<int> r , int d , List<int> week ) {
+        List<int> shadows = [ Field.kFOG , Field.kFOG , Field.kFOG ];
 
-        List<int> shadows = [
-            ( shadow[ 1 - 1 ] | shadow[ 2 - 1 ] | shadow[ 3 - 1 ] ),
-            ( shadow[ 2 - 1 ] | shadow[ 3 - 1 ] ),
-            ( shadow[ 3 - 1 ] ),
-        ];
+        for( final e in this.map.entries ) {
+            Sakura t = this.boardTree[e.value]!;
+            Field f = mapFields[e.key];
 
-        for( int indexStack in this.map.values )
-        {
+            for( int s = 0 ; s < 3 ; s++ ) {
+                if( s < t.size )
+                    shadows[s] &= f.shadows[d][s];
+                else
+                    break; } }
+
+        for( int indexStack in this.map.values ) {
             Sakura t = this.boardTree[indexStack]!;
 
             if( t.size == 0 )
                 continue;
-            int compute = (1 << t.cellIndex) & ~( shadows[ t.size - 1] );
+            int compute = (1 << t.cellIndex) & ( shadows[ t.size - 1] );
             if( compute != 0 )
-                r[t.isMine] = r[t.isMine] + t.size * week[d];
-        }
-    }
+                r[t.isMine] = r[t.isMine] + t.size * week[d]; } }
 
     void resolveSeed() {
         if( this.agent[kO].nextSeed == this.agent[kM].nextSeed ) {
@@ -283,7 +273,6 @@ class NatureSpirit
 
     void reset() {
         this.map = new SplayTreeMap<int,int>();
-        //this.cost = [ [ 0 , 1 , 3 , 7 ] , [ 0 , 1 , 3 , 7 ] ];
         this.boardTree = [
         null , null , null , null , null , null , null , null , null , null, null , null ,
         null , null , null , null , null , null , null , null , null , null, null , null ,
@@ -311,21 +300,18 @@ class NatureSpirit
         this.treeTop[ t.isMine ] += - 2 * t.isMine + 1;
     }
 
-    void simuDay()
-    {
+    void simuDay() {
         this.nutrients = this.nutrients - this.complete;
         this.complete = 0;
         this.day++;
         int d = (this.day % 6);
         List<int> sun = [ this.agent[kO].sun , this.agent[kM].sun ];
-        this.predictSum( sun , mapShadow[ d ] , d , [ 1 , 1 , 1 , 1 , 1 , 1 ] );
+        this.predictSum( sun , d , [ 1 , 1 , 1 , 1 , 1 , 1 ] );
         this.agent[kO].hardsun = sun[kO];
         this.agent[kM].hardsun = sun[kM];
 
         for( int indexStack in this.map.values ) {
-            this.boardTree[indexStack]!.isDormant = 0; }
-
-    }
+            this.boardTree[indexStack]!.isDormant = 0; } }
 
     bool simuTurn( List<int> mine , List<int> opp ) {
         bool isNewDay = true;
@@ -347,8 +333,13 @@ class NatureSpirit
 
 class Field
 {
+    static final int kFOG = 0x1fffffffff;
     int friend = ~0 ;
     List<int> seedling = [ 0 , 0 ];
+    List<List<int>> shadows = [
+    [ kFOG , kFOG , kFOG ] , [ kFOG , kFOG , kFOG ] , [ kFOG , kFOG , kFOG ] ,
+    [ kFOG , kFOG , kFOG ] , [ kFOG , kFOG , kFOG ] , [ kFOG , kFOG , kFOG ]
+    ];
     int index = 0, richness = 0;
     List<int> neigh = [];
 
@@ -359,6 +350,20 @@ class Field
         this.neigh = List.generate( 7 , (j) => parse(i[j+2]) , growable : false );
         this.friend = 0x1fffffffff & ~(1 << this.index);
     }
+
+    void memoizationFog( List<Field> fields ) {
+        //  Update shadows (size - 1)
+        for( int day = 0 , size = 0 ; day < 6 ; day++ , size = 0 ) {
+            int next = this.neigh[ day ];
+            if( next == -1 )
+                break;
+            Field current = fields[next];
+
+            for( next = this.neigh[day] ; size < 3 ; size++ , next = current.neigh[day] ) {
+                if( next != -1 ) {
+                    current = fields[next];
+                    break; }
+                this.shadows[day][size] &= ~(1 << next); } } }
 
     void memoization(List<Field> fields) {
         //  Update seedling
@@ -429,8 +434,8 @@ class Tree {
     List<int> opp = [];
 
     //  Best three action determined by predict 3 x 3
-    late SplayTreeMap<int,List<int>> minePredictAction ; //= new SplayTreeMap<int,List<int>>();
-    late SplayTreeMap<int,List<int>> oppPredictAction ; //= new SplayTreeMap<int,List<int>>();
+    late SplayTreeMap<int,List<int>> minePredictAction ;
+    late SplayTreeMap<int,List<int>> oppPredictAction ;
 
     @override
     String toString() {
@@ -463,23 +468,10 @@ class Tree {
             week[nRest]++;
 
         List<int> renting = [ 0 , 0 ] ;
-        for( int day = 0 ; day < 6 ; day++ )
-        {
-            predictSum( renting , mapShadow[day] , day , week );
-        }
+        for( int day = 0 ; day < 6 ; day++ ) {
+            predictSum( renting , day , week ); }
 
-        //List<int> nTree = [ this.game.ownTree[kO].length , this.game.ownTree[kM].length ];
         List<int> richning = [ 0 , 0 ];
-        //for( int o = 0 ; o < 2 ; o++ )
-        //{
-        //    richning[o] = 3 *
-        //    ( (this.game.nutrients - nTree[(o + 1) & 1]) + (this.game.nutrients - nTree[0] - nTree[1]) ) * nTree[o]
-        //    ~/ 2 ;
-
-        //    for( final t in this.game.ownTree[o] )
-        //        richning[o] = richning[o] - 15 + (mapFields[t].richness * 3);
-        //}
-
         List<int> score = [ 0 , 0 ];
         for( int o = 0 ; o < 2 ; o++ )
             score[o]   = this.game.agent[o].score * 3
@@ -493,24 +485,6 @@ class Tree {
         t[scoring] = this;
     }
 
-}
-
-List<int> memoizationShadow(List<Field> fields , int day)
-{
-    List<int> shadow = [ 0 , 0 , 0 ];
-    int s = 0;
-    for( final Field f in fields )
-    {
-        Field _ = f;
-        for( int s = 0 ; s < 3 ; s++ )
-        {
-            int next = _.neigh[ day ];
-            if( next == -1 )    break;
-            shadow[ s ] = shadow[ s ] | (1 << next);
-            _ = fields[ next ];
-        }
-    }
-    return shadow;
 }
 
 void resolveNode( int end , Tree g , SplayTreeMap bst , SplayTreeMap brt )
@@ -577,7 +551,6 @@ void main()
 {
     //  Needs fields
     mapFields = List.generate( 37 , (j) => new Field( i : ["0","0","0","0","0","0","0","0"] ) , growable : false );
-    mapShadow = List.generate( 6 , (i) => [ 0 , 0 , 0 ], growable: false );
 
     SplayTreeMap beamSearchTree = new SplayTreeMap<int,Tree>();
     SplayTreeMap beamBestResult = new SplayTreeMap<int,Tree>();
@@ -588,10 +561,9 @@ void main()
     n = parse(read());
     for (int i = 0; i < n; i++)
         mapFields[i] = new Field( i : read().split(' ') );
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; i++) {
         mapFields[i].memoization( mapFields );
-    for( int day = 0 ; day < 6 ; day++ )
-        mapShadow[day] = memoizationShadow( mapFields , day );
+        mapFields[i].memoizationFog( mapFields ); }
 
     stopwatch.start();
     while (true)
@@ -615,7 +587,7 @@ void main()
             var _ = read().split(' ');
 
         stopwatch.reset();
-        error("TURN ${turn++} ${game.agent}");
+        turn++;
         node = new Tree( g: game );
 
         beamSearchTree = new SplayTreeMap<int,Tree>();
