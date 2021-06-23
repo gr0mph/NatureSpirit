@@ -9,6 +9,7 @@ final List<String> kORDER = ["GROW","COMPLETE","SEED","WAIT"];
 final int kB = 3;
 final int kLIMIT_START = 700, kLIMIT_TURN = 70;
 final List<int> kCOST = [ 0 , 1 , 3 , 7 , 4 ];
+final List<int> kFUZZY = [ 7 , 3 , 3 , 0 ];
 
 //  Time
 Stopwatch stopwatch = new Stopwatch();
@@ -43,8 +44,8 @@ class Sakura
     void seeds( NatureSpirit _ , List<int> i ) {
         int isMine = i[1];
         _.agent[isMine].nextSeed = i[3];
-        this.isDormant = 1;
-        _.agent[isMine].fuzzy -= _.agent[isMine].getCost(0); }
+        this.isDormant = 1; }
+        //_.agent[isMine].fuzzy -= _.agent[isMine].getCost(0); }
 
     void grows( NatureSpirit _ , List<int> i ) {
         int isMine = i[1];
@@ -52,12 +53,12 @@ class Sakura
         _.agent[isMine].sun -= bill;
         _.agent[isMine].decCost(this.size++);
         this.isDormant = 1;
-        _.agent[isMine].fuzzy +=  2 * kCOST[this.size] - bill; }
+        _.agent[isMine].fuzzy +=  2 * kFUZZY[ kG ] - bill; }
 
     void completes( NatureSpirit _ , List<int> i ) {
         int isMine = i[1];
         _.agent[isMine].sun -= 4;
-        _.agent[isMine].fuzzy += 4;
+        _.agent[isMine].fuzzy += 2 * kFUZZY[ kC ] - 4;
 
         int indexStack = _.map[ this.cellIndex ]!;
 
@@ -79,7 +80,8 @@ class Sakura
 void updateAction( SplayTreeMap<int,List<int>> m , List<int> a , int k )
 {
     //  WAIT and SEED has ZERO gain
-    while( m.containsKey( k ) ) k++;
+    k = -10 * k;
+    while( m.containsKey( k ) ) k--;
     m[k] = a;
 }
 
@@ -111,12 +113,12 @@ List<SplayTreeMap<int,List<int>>> predict( NatureSpirit g )
         if( t.size < 3 ) {
             int bill = g.agent[ t.isMine].getCost(t.size+1);
             if( bill <= g.agent[t.isMine].sun ) {
-                int K   = g.agent[ t.isMine ].fuzzy + 2 * kCOST[t.size + 1 ] - bill;
+                int K   = g.agent[ t.isMine ].fuzzy + 2 * kFUZZY[ kG ] - bill;
                 updateAction( pAction[ t.isMine ] , [kG , t.isMine , t.cellIndex ], K );} }
 
         else
             if( 4 <= g.agent[t.isMine].sun ) {
-                int K   = g.agent[ t.isMine ].fuzzy + 4;
+                int K   = g.agent[ t.isMine ].fuzzy + 2 * kFUZZY[ kC] - 4;
                 updateAction( pAction[ t.isMine ] , [kC , t.isMine , t.cellIndex ], K );}}
 
     for( int indexStack in g.map.values ) {
@@ -136,7 +138,7 @@ List<SplayTreeMap<int,List<int>>> predict( NatureSpirit g )
 
         for( int i = 0 ; i < 37 ; i++ ) {
             if( seedling & 1 == 1 ) {
-                int K   = g.agent[ t.isMine ].fuzzy - bill;
+                int K   = g.agent[ t.isMine ].fuzzy + 2 * kFUZZY[ kS ] - bill;
                 updateAction( pAction[ t.isMine ] , [kS , t.isMine , t.cellIndex , i ] , K ); }
             seedling = seedling >> 1; } }
 
@@ -164,8 +166,9 @@ class Agent
     void incCost( int index ) => private2 = private2 + 1 << (5 * index);
     void decCost( int index ) => private2 = private2 - 1 << (5 * index);
 
-    int get fuzzy => private2 >> 20;
-    void set fuzzy( int d ) => private2 = private2 & 0xfffff | (d << 20);
+    int fuzzy = 0;
+    //int get fuzzy => private2 >> 20;
+    //void set fuzzy( int d ) => private2 = private2 & 0xfffff | (d << 20);
 
     Agent( {required int d }) : this.private = d ;
     Agent.fromAgent(Agent _) : this.private = _.private ;
@@ -264,7 +267,9 @@ class NatureSpirit
                 int cellIndex = this.agent[o].nextSeed, indexStack = this.treeTop[o];
                 Sakura t = new Sakura( cellIndex , 0, o );
 
-                this.agent[o].sun -= this.agent[o].getCost(0);
+                int cost = this.agent[o].getCost(0);
+                this.agent[o].fuzzy += 2 * kFUZZY[ kS ] - cost;
+                this.agent[o].sun -= cost;
                 this.agent[o].incCost(0);
                 this.boardTree[ indexStack ] = t;
                 this.map[cellIndex] = indexStack;
@@ -451,6 +456,7 @@ class Tree {
     void updateHeap( SplayTreeMap t )
     {
         int b = 10 * (this.game.agent[kO].fuzzy - this.game.agent[kM].fuzzy);
+        error("HEAP $b ${this.game.agent[kO].fuzzy} ${this.game.agent[kM].fuzzy}");
         while( t.containsKey(b) )   b--;
         t[b] = this;
     }
